@@ -100,13 +100,14 @@ HUST-DATN-20261-AD-Clinic-Detection/
 │   ├── scenario_02_kerberoast_opsec/         # Kịch bản 2: Kerberoasting hạ cấp RC4 (0x17) vs OpSec AES256 (0x12)
 │   └── scenario_03_his_db_tampering/         # Kịch bản 3: Chiếm quyền SVC đọc/xóa bệnh án, bật xp_cmdshell, tắt Audit
 │
-├── 03_siem_rules_v1_to_v4/                   # [PHẦN 3A] SIEM Offline & Bộ luật Sigma/KQL từ V1 đến V4
+├── 03_siem_rules_v1_to_v4/                   # [PHẦN 3A] SIEM Offline & Bộ luật Sigma/KQL từ V1 đến V4 & Playbook
 │   ├── elk_docker_wsl2/                      # Docker Compose ELK Single-node
 │   ├── v1_default_ootb/                      # Luật V1: Mặc định (Out-of-the-Box) dựa trên chữ ký tĩnh
 │   ├── v2_widened_evasion/                   # Luật V2: Nới lỏng điều kiện để bắt kỹ thuật lẩn tránh
 │   ├── v3_threshold_sliding_window/          # Luật V3: Tinh chỉnh ngưỡng thời gian (Sliding Window) & tần suất
 │   ├── v4_contextual_clinic_tuned/           # Luật V4: Tối ưu ngữ cảnh y tế & ràng buộc pháp lý Thông tư 13/2025
-│   └── kql_queries/                          # Các truy vấn KQL/EQL đóng gói sẵn để import vào Kibana
+│   ├── kql_queries/                          # Các truy vấn KQL/EQL đóng gói sẵn để import vào Kibana
+│   └── tuning_playbook/                      # Hướng dẫn vận hành & kiếm tra cảnh báo 30 phút đầu giờ cho IT phòng khám
 │
 ├── 04_evaluation_and_datasets/               # [PHẦN 3B] Tập dữ liệu .evtx chuẩn & công cụ đo lường thực nghiệm
 │   ├── evtx_master_datasets/                 # Các tệp log mẫu (.evtx) đã gán nhãn thời gian và ẩn danh hóa
@@ -116,8 +117,8 @@ HUST-DATN-20261-AD-Clinic-Detection/
 │
 └── docs/                                     # Tài liệu căn cứ pháp lý (2025-2026), trích dẫn học thuật & Playbook
     ├── legal_compliance_2025_2026/           # Tóm tắt yêu cầu kỹ thuật từ luật BVDLCN 2025, NĐ 356, TT 13/2025/TT-BYT
-    ├── academic_references/                  # Cơ sở lý thuyết: Base-Rate Fallacy (Axelsson, 1999) & Alert Granularity
-    └── tuning_playbook/                      # Tài liệu hướng dẫn vận hành & kiểm tra cảnh báo 30 phút đầu giờ cho IT phòng khám
+    └── academic_references/                  # Cơ sở lý thuyết: Base-Rate Fallacy (Axelsson, 1999) & Alert Granularity
+
 ```
 
 ---
