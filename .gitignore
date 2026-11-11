@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 03_siem_rules_v1_to_v4/elk_docker_wsl2/esdata/
+repomix-output.xml
