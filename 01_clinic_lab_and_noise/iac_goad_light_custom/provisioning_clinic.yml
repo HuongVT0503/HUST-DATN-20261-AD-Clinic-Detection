@@ -1,0 +1,180 @@
+---
+# ==============================================================================
+# ĐỒ ÁN TỐT NGHIỆP KỲ 2026.1 - ĐẠI HỌC BÁCH KHOA HÀ NỘI (HUST)
+# Sinh viên thực hiện: Vũ Thúy Hường - MSSV: 20225135
+# Tệp: 01_clinic_lab_and_noise/iac_goad_light_custom/provisioning_clinic.yml
+# Mô tả: Playbook Ansible tự động hóa toàn bộ quá trình dựng Lab Phòng khám 3 VMs:
+#        - PLAY 1: Nâng cấp DC01 lên Domain Controller (clinic.local)
+#        - PLAY 2: Khởi tạo 6 OUs, 5 Groups, 200 Users, SVC_HIS_Database & Audit 1644/4769
+#        - PLAY 3: Đưa SRV02 và WS01 gia nhập miền clinic.local
+#        - PLAY 4: Cài đặt MS SQL Server, HIS_ClinicDB, Audit 33205 & Share \\SRV02\BenhAn$
+#        - PLAY 5: Phân quyền giao ca trên WS01 và triển khai Sysmon trên cả 3 nút
+# ==============================================================================
+
+# ==============================================================================
+# PLAY 1: KHỞI TẠO FOREST CLINIC.LOCAL TRÊN MÁY CHỦ DC01
+# (Kế thừa và tùy biến từ ansible/roles/domain_controller của GOAD-Light)
+# ==============================================================================
+- name: "[PLAY 1] Cài đặt AD-Domain-Services và khởi tạo Forest clinic.local trên DC01"
+  hosts: dc01
+  gather_facts: no
+  tasks:
+    - name: "Đổi Hostname thành DC01"
+      ansible.windows.win_hostname:
+        name: "{{ hostname }}"
+      register: rename_dc01
+
+    - name: "Khởi động lại DC01 nếu vừa đổi Hostname"
+      ansible.windows.win_reboot:
+      when: rename_dc01.reboot_required
+
+    - name: "Cài đặt Windows Feature AD-Domain-Services kèm công cụ quản trị RSAT"
+      ansible.windows.win_feature:
+        name: AD-Domain-Services
+        include_management_tools: yes
+        include_sub_features: yes
+        state: present
+
+    - name: "Khởi tạo Active Directory Forest clinic.local (NetBIOS: CLINIC)"
+      microsoft.ad.domain:
+        dns_domain_name: "{{ domain_name }}"
+        domain_netbios_name: "{{ netbios_name }}"
+        safe_mode_password: "{{ dsrm_password }}"
+        forest_mode: WinThreshold
+        domain_mode: WinThreshold
+        install_dns: yes
+        reboot: yes
+
+    - name: "Đợi dịch vụ Active Directory Web Services (ADWS) sẵn sàng sau khi Reboot"
+      ansible.windows.win_service:
+        name: ADWS
+        state: started
+      register: adws_status
+      until: adws_status.state == "started"
+      retries: 15
+      delay: 15
+
+# ==============================================================================
+# PLAY 2: KHỞI TẠO 200 ĐỊNH DANH Y TẾ, LỖ HỔNG KERBEROAST & TELEMETRY TRÊN DC01
+# (Kế thừa từ ansible/roles/ad & vulns/kerberoast + Bổ sung Telemetry 1644/4769)
+# ==============================================================================
+- name: "[PLAY 2] Khởi tạo 200 nhân sự phòng khám, SVC_HIS_Database và bật Audit 1644/4769"
+  hosts: dc01
+  gather_facts: no
+  tasks:
+    - name: "Thực thi kịch bản Import-ClinicADUsers.ps1 (6 OUs, 5 Groups, 200 Users, SVC_HIS_Database)"
+      ansible.windows.win_shell: |
+        powershell.exe -ExecutionPolicy Bypass -File "{{ repo_guest_path }}\01_clinic_lab_and_noise\ad_identity_200_users\Import-ClinicADUsers.ps1"
+
+    - name: "Đảm bảo SVC_HIS_Database gắn đúng SPN MSSQLSvc/SRV02.clinic.local:1433 và hỗ trợ cả RC4 (0x17) & AES (0x12)"
+      ansible.windows.win_shell: |
+        Import-Module ActiveDirectory
+        Set-ADUser -Identity "{{ his_sql_svc_account }}" -ServicePrincipalNames @{Add="MSSQLSvc/SRV02.clinic.local:1433"} -ErrorAction SilentlyContinue
+        Set-ADUser -Identity "{{ his_sql_svc_account }}" -KerberosEncryptionType RC4,AES128,AES256
+        Set-ADUser -Identity "{{ his_sql_svc_account }}" -Replace @{adminCount=1}
+
+    - name: "Bật Registry NTDS Field Engineering = 5 (Event ID 1644) và hạ ngưỡng bắt truy vấn ADSI xuống 1"
+      ansible.windows.win_shell: |
+        reg import "{{ repo_guest_path }}\02_telemetry_and_scenarios\telemetry_configs\Enable-LDAP-1644-Diagnostics.reg"
+        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\NTDS\Diagnostics" -Name "15 Field Engineering" -Value 5 -Type DWord
+        New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\NTDS\Parameters" -Name "Expensive Search Results Threshold" -Value 1 -PropertyType DWord -Force
+        New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Services\NTDS\Parameters" -Name "Inefficient Search Results Threshold" -Value 1 -PropertyType DWord -Force
+
+    - name: "Kích hoạt Advanced Audit Policy trên DC01 (Event ID 4769, 4624, 4625) và mở rộng dung lượng .evtx"
+      ansible.windows.win_shell: |
+        auditpol /set /subcategory:"Kerberos Service Ticket Operations" /success:enable /failure:enable
+        auditpol /set /subcategory:"Kerberos Authentication Service" /success:enable /failure:enable
+        auditpol /set /subcategory:"Logon" /success:enable /failure:enable
+        auditpol /set /subcategory:"Logoff" /success:enable
+        wevtutil sl Security /ms:536870912
+        wevtutil sl "Directory Service" /ms:536870912
+
+# ==============================================================================
+# PLAY 3: ĐƯA MÁY CHỦ BỆNH ÁN (SRV02) VÀ MÁY TRẠM (WS01) GIA NHẬP MIỀN
+# (Kế thừa và tùy biến từ ansible/roles/member_server của GOAD-Light)
+# ==============================================================================
+- name: "[PLAY 3] Cấu hình DNS và đưa SRV02, WS01 gia nhập miền clinic.local"
+  hosts: member
+  gather_facts: no
+  tasks:
+    - name: "Trỏ DNS Client của SRV02 và WS01 về địa chỉ IP của DC01 ({{ dc01_ip }})"
+      ansible.windows.win_shell: |
+        Get-NetAdapter | Where-Object {$_.Status -eq "Up"} | Set-DnsClientServerAddress -ServerAddresses "{{ dc01_ip }}"
+
+    - name: "Đổi Hostname và gia nhập miền clinic.local (Tự động Reboot)"
+      microsoft.ad.membership:
+        dns_domain_name: "{{ domain_name }}"
+        hostname: "{{ hostname }}"
+        domain_admin_user: "{{ domain_admin_user }}"
+        domain_admin_password: "{{ domain_admin_pass }}"
+        domain_ou_path: "OU=ClinicComputers,DC=clinic,DC=local"
+        state: domain
+        reboot: yes
+
+# ==============================================================================
+# PLAY 4: CẤU HÌNH MÁY CHỦ BỆNH ÁN SRV02 (SMB SHARE BenhAn$ & MS SQL SERVER HIS)
+# (Kế thừa từ ansible/roles/smb & mssql + Bổ sung CSDL Bệnh án & SQL Audit 33205)
+# ==============================================================================
+- name: "[PLAY 4] Triển khai SMB Share \\\\SRV02\\BenhAn$, MS SQL Server, CSDL HIS_ClinicDB và SQL Audit 33205"
+  hosts: srv02
+  gather_facts: no
+  tasks:
+    - name: "Thêm SVC_HIS_Database và SVC_HIS_Sync vào nhóm Local Administrators trên SRV02"
+      ansible.windows.win_shell: |
+        Add-LocalGroupMember -Group "Administrators" -Member "CLINIC\{{ his_sql_svc_account }}", "CLINIC\{{ his_sync_svc_account }}", "CLINIC\GRP_IT_Admin" -ErrorAction SilentlyContinue
+
+    - name: "Chạy Setup_SMB_BenhAn_Share.ps1 khởi tạo thư mục XML BHYT (QĐ 130/QĐ-BYT) và gắn SACL (Event ID 5140/5145)"
+      ansible.windows.win_shell: |
+        powershell.exe -ExecutionPolicy Bypass -File "{{ repo_guest_path }}\01_clinic_lab_and_noise\his_mssql_database\Setup_SMB_BenhAn_Share.ps1"
+
+    - name: "Cài đặt tự động MS SQL Server (Bật TCP/IP cổng 1433) và công cụ sqlcmd"
+      ansible.windows.win_shell: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+            iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        }
+        choco install sql-server-express -y --params="'/SECURITYMODE=SQL /SAPWD=Password123! /TCPENABLED=1'"
+        choco install sqlserver-cmdlineutils -y
+        New-NetFirewallRule -DisplayName "Allow_MSSQL_1433" -Direction Inbound -Protocol TCP -LocalPort 1433 -Action Allow -ErrorAction SilentlyContinue
+
+    - name: "Nạp lược đồ CSDL Bệnh án HIS_ClinicDB và kích hoạt SQL Server Audit (Event ID 33205 & 15457)"
+      ansible.windows.win_shell: |
+        sqlcmd -S localhost -E -i "{{ repo_guest_path }}\01_clinic_lab_and_noise\his_mssql_database\Init_HIS_EMR_Schema.sql"
+        sqlcmd -S localhost -E -i "{{ repo_guest_path }}\01_clinic_lab_and_noise\his_mssql_database\Configure_SQL_Server_Audit_33205.sql"
+        wevtutil sl Application /ms:536870912
+
+# ==============================================================================
+# PLAY 5: CẤU HÌNH MÁY TRẠM PHÒNG KHÁM WS01 VÀ TRIỂN KHAI SYSMON TRÊN 3 NÚT
+# ==============================================================================
+- name: "[PLAY 5] Cấp quyền đăng nhập đổi ca cho Y Bác sĩ trên WS01 và cài công cụ kiểm thử"
+  hosts: ws01
+  gather_facts: no
+  tasks:
+    - name: "Cho phép các nhóm GRP_BacSi, GRP_YTa, GRP_LeTan đăng nhập trên WS01"
+      ansible.windows.win_shell: |
+        Add-LocalGroupMember -Group "Remote Desktop Users" -Member "CLINIC\GRP_BacSi", "CLINIC\GRP_YTa", "CLINIC\GRP_LeTan" -ErrorAction SilentlyContinue
+        Add-LocalGroupMember -Group "Users" -Member "CLINIC\GRP_BacSi", "CLINIC\GRP_YTa", "CLINIC\GRP_LeTan" -ErrorAction SilentlyContinue
+
+    - name: "Cài đặt công cụ sqlcmd trên máy trạm WS01"
+      ansible.windows.win_shell: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+            iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+        }
+        choco install sqlserver-cmdlineutils -y
+
+- name: "[PLAY 6] Cài đặt Sysmon với cấu hình sysmon_clinic_config.xml trên cả 3 máy (DC01, SRV02, WS01)"
+  hosts: sysmon_nodes
+  gather_facts: no
+  tasks:
+    - name: "Tải và cài đặt Sysmon64.exe"
+      ansible.windows.win_shell: |
+        New-Item -Path "C:\Tools" -ItemType Directory -Force | Out-Null
+        if (-not (Get-Service Sysmon64 -ErrorAction SilentlyContinue)) {
+            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+            Invoke-WebRequest -Uri "https://download.sysinternals.com/files/Sysmon.zip" -OutFile "C:\Tools\Sysmon.zip"
+            Expand-Archive -Path "C:\Tools\Sysmon.zip" -DestinationPath "C:\Tools\Sysmon" -Force
+            C:\Tools\Sysmon\Sysmon64.exe -accepteula -i "{{ repo_guest_path }}\02_telemetry_and_scenarios\telemetry_configs\sysmon_clinic_config.xml"
+        }

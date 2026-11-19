@@ -1,0 +1,28 @@
+title: "[SC3-V1] Phát hiện Thực thi Lệnh Hệ điều hành từ Tiến trình SQL Server (xp_cmdshell)"
+id: 11111111-0003-4001-a001-000000000003
+status: stable
+description: >
+  Phiên bản V1 (Out-of-the-Box): Chỉ giám sát ở tầng tiến trình (Sysmon Event ID 1) khi
+  sqlservr.exe gọi cmd.exe hoặc powershell.exe (Kịch bản 3A).
+  Điểm mù: Bỏ lọt hoàn toàn Kịch bản 3B (Tắt SQL Audit) và Kịch bản 3C (Dùng sqlcmd.exe hợp lệ
+  để đọc/xóa trái phép bảng bệnh án điện tử dbo.HoSoBenhAn).
+author: "Vũ Thúy Hường (20225135 - HUST)"
+date: 2026/11/15
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    EventID: 1
+    ParentImage|endswith: '\sqlservr.exe'
+    Image|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  condition: selection
+falsepositives:
+  - "Thấp."
+level: high
+tags:
+  - attack.execution
+  - attack.t1059.003

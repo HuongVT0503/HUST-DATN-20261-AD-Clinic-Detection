@@ -1,0 +1,338 @@
+### PHẦN 1: Thống kê chi tiết toàn bộ cấu trúc thư mục `ad/GOAD-Light/`
+
+Trong repository `Orange-Cyberdefense/GOAD` gốc, thư mục `ad/GOAD-Light/` bao gồm file tài liệu chung, thư mục `data/`, thư mục `files/` (chứa các asset tĩnh cho từng máy ảo), và 6 thư mục tương ứng với các hạ tầng khác nhau (`aws`, `azure`, `ludus`, `proxmox`, `virtualbox`, `vmware`). Dưới đây là danh sách thống kê chi tiết **toàn bộ các file** có trong `ad/GOAD-Light/` và hướng xử lý khi đưa vào đồ án:
+
+| Đường dẫn file trong `ad/GOAD-Light/` | Nội dung gốc trong Repo | Hành động | Lập luận kỹ thuật cho Đồ án |
+| --- | --- | --- | --- |
+| `ad/GOAD-Light/README.md` | Tổng quan mô hình (Topology), bảng IP network (`192.168.56.10`, `.11`, `.22`) và link sơ đồ kiến trúc. | **Chỉ dùng tham khảo** | Em trích dẫn trong phần tài liệu tham khảo để làm rõ mô hình 3-VM `GOAD-Light` gốc (`dc01`, `dc02`, `srv02`) trước khi tinh chỉnh. |
+| `ad/GOAD-Light/data/inventory` | File cấu hình Ansible định dạng INI (~135 dòng) chứa khai báo host `[default]` (`dc01`, `dc02`, `srv02`), phân chia các role (`[dc]`, `[child_dc]`, `[server]`, `[iis]`, `[mssql]`, `[adcs]`, `[trust]`, `[laps]`, `[defender_off]`, `[update]`, `[no_update]`) và biến global `[all:vars]`. | **Sửa & Rút gọn** | **Giữ lại:** Các role `[dc]`, `[server]`, `[mssql]`.<br>
+
+<br>
+
+<br>**Chỉnh sửa:** Gom tất cả vào chung 1 node AWS EC2 (`clinic.local`).<br>
+
+<br>
+
+<br>**Lược bỏ:** Các role `[child_dc]`, `[iis]`, `[adcs]`, `[trust]`, `[laps]` và khai báo IP tĩnh `192.168.56.x` của VirtualBox. |
+| `ad/GOAD-Light/data/config.json` | File JSON tổng (~450 dòng) định nghĩa toàn bộ `domains`, `computers`, `groups`, `users`, `shares`, `adcs_templates`, `acls`, `local_admins`, và `gpos`. | **Sửa & Rút gọn** | Từng block cấu hình JSON này được em tái cấu trúc và giải trình chi tiết ở **Phần 2** bên dưới. |
+| `ad/GOAD-Light/files/dc01/` *(hoặc `ansible/roles/.../files/`)* | File tĩnh đẩy lên `dc01` (ảnh nền `.bmp` BGInfo, certificate templates). | **Lược bỏ** | Việc set hình nền hay copy file ADCS không sinh ra log `.evtx` phục vụ bài toán detect tấn công AD/SQL của đồ án. |
+| `ad/GOAD-Light/files/dc02/` | File tĩnh đẩy lên `dc02` (hình nền `winterfell` / scripts). | **Lược bỏ** | Server `dc02` (`north.sevenkingdoms.local`) đã bị loại bỏ vì mô hình phòng khám chỉ dùng 1 domain duy nhất. |
+| `ad/GOAD-Light/files/srv02/` | Mã nguồn Web (`upload.asp`, `Default.aspx`) chạy trên IIS của `castelblack` (`srv02`). | **Lược bỏ** | Khai thác webshell qua IIS không nằm trong phạm vi đồ án; em chỉ tập trung vào tấn công định danh AD + SQL Server DB (`HIS_ClinicDB`) & SMB share (`BenhAn$`). |
+| `ad/GOAD-Light/providers/aws/main.tf` | Khai báo Terraform provider (`hashicorp/aws`) và state. | **Lược bỏ (Tự dựng EC2 tay)** | Nếu chạy nguyên cục Terraform AWS của GOAD thì nó sẽ deploy 3 Windows VMs + 1 Ubuntu Jumpbox + NAT Gateway, làm chi phí AWS hàng giờ tăng gấp 4 lần. |
+| `ad/GOAD-Light/providers/aws/network.tf` | Khai báo Terraform cho AWS VPC, Subnet (`192.168.56.0/24`), Internet Gateway, Route Table, và Security Groups. | **Sửa (Thao tác trên GUI AWS)** | Thay bằng VPC mặc định của AWS và tạo 1 Security Group duy nhất (chỉ mở RDP `Allow 3389` từ IP nhà em). |
+| `ad/GOAD-Light/providers/aws/windows.tf` *(hoặc `instances.tf`)* | Khai báo `aws_instance` cho `dc01`, `dc02`, `srv02` dùng AMI Windows Server 2019 (`t3.medium` / `t3.large`) + script WinRM `user_data`. | **Chỉnh sửa** | Em gom lại thành 1 instance `t3.large` duy nhất chạy **Windows Server 2022 Base** (`CLINIC-DC01-SRV02`). |
+| `ad/GOAD-Light/providers/aws/jumpbox.tf` *(hoặc `linux.tf`)* | Khai báo máy ảo Ubuntu jumpbox nằm trong AWS VPC dùng để chạy Ansible qua WinRM. | **Lược bỏ** | Em đứng từ **WSL2** (Ubuntu) trên laptop Windows 11 ở nhà để chạy script tấn công, và cấu hình server trực tiếp bằng PowerShell qua RDP. |
+| `ad/GOAD-Light/providers/aws/variables.tf` & `outputs.tf` | Các biến đầu vào (`region`, `ami_id`, `instance_type`) và output IP. | **Lược bỏ** | Đã thiết lập trực tiếp trên AWS Console (Region `ap-southeast-1` Singapore). |
+| `ad/GOAD-Light/providers/azure/*` | Khai báo Terraform cho môi trường Azure. | **Lược bỏ** | Đồ án chọn nền tảng AWS EC2, không dùng Microsoft Azure. |
+| `ad/GOAD-Light/providers/ludus/config.yml` | Cấu hình YAML để deploy `GOAD-Light` lên server **Ludus** (Cyber range ảo hóa trên Proxmox). | **Lược bỏ** | Đồ án không chạy trên máy chủ vật lý Proxmox/Ludus riêng. |
+| `ad/GOAD-Light/providers/proxmox/*` | Khai báo Terraform cho môi trường Proxmox. | **Lược bỏ** | Tương tự, cần có máy chủ vật lý cài Proxmox hypervisor. |
+| `ad/GOAD-Light/providers/virtualbox/Vagrantfile` | Script Ruby Vagrant định nghĩa 3 VMs VirtualBox, cấu hình RAM và card mạng `vboxnet`. | **Lược bỏ** | Giới hạn phần cứng (Laptop em chỉ có 8GB RAM, không thể gánh cùng lúc 3 máy ảo Windows Server). |
+| `ad/GOAD-Light/providers/vmware/Vagrantfile` | Script Ruby Vagrant cho `vmware_desktop`. | **Lược bỏ** | Chung lý do giới hạn RAM 8GB trên máy cá nhân. |
+
+---
+
+### PHẦN 2: Tái cấu trúc và giải trình chi tiết từng dòng mã nguồn file `ad/GOAD-Light/data/config.json` (~450 Dòng)
+file `ad/GOAD-Light/data/config.json` gốc dài tới khoảng 450 dòng vì định dạng JSON tách mỗi thuộc tính (`password`, `description`, `groups`, `path`, `spn`, `acls`, `machines`, `shares`, `vulnerabilities`) xuống một dòng riêng rẽ trong **9 block cấu trúc chính**.
+
+Dưới đây là **toàn bộ nội dung của ~450 dòng cấu hình này**, được em chia thành từng block nhỏ để giải trình rõ lý do **Giữ lại / Chỉnh sửa / Hay Lược bỏ** từng dòng một phục vụ cho đồ án.
+
+---
+
+#### BLOCK 1: Khai báo `"lab"` & `"domains"` (Dòng 1–65)
+
+```json
+{
+  "lab": "GOAD-Light",
+  "domains": {
+    "sevenkingdoms.local": {
+      "dc": "dc01",
+      "netbios": "SEVENKINGDOMS",
+      "FunctionalLevel": "WinThreshold",
+      "ous": {
+        "Crownlands": { "description": "Crownlands OU", "path": "DC=sevenkingdoms,DC=local" },
+        "KingsLanding": { "description": "KingsLanding OU", "path": "DC=sevenkingdoms,DC=local" },
+        "Dragonstone": { "description": "Dragonstone OU", "path": "DC=sevenkingdoms,DC=local" },
+        "NarrowSea": { "description": "NarrowSea OU", "path": "DC=sevenkingdoms,DC=local" }
+      },
+      "trusts": {
+        "north.sevenkingdoms.local": {
+          "direction": "Bidirectional",
+          "type": "ParentChild",
+          "sid_filtering": false
+        }
+      }
+    },
+    "north.sevenkingdoms.local": {
+      "dc": "dc02",
+      "parent_domain": "sevenkingdoms.local",
+      "netbios": "NORTH",
+      "FunctionalLevel": "WinThreshold",
+      "ous": {
+        "Winterfell": { "description": "Winterfell OU", "path": "DC=north,DC=sevenkingdoms,DC=local" },
+        "TheWall": { "description": "TheWall OU", "path": "DC=north,DC=sevenkingdoms,DC=local" }
+      }
+    }
+  },
+
+```
+
+* **Giải trình chi tiết từng thành phần:**
+* `"sevenkingdoms.local"`, `"dc": "dc01"`, `"FunctionalLevel": "WinThreshold"` $\rightarrow$ **CHỈNH SỬA:** Đổi tên domain thành `"clinic.local"` (`netbios: "CLINIC"`), giữ nguyên `WinThreshold` (Tương đương Forest Functional Level của Windows Server 2016/2022).
+* `"ous"` (`Crownlands`, `KingsLanding`, `Dragonstone`, `NarrowSea`, `Winterfell`, `TheWall`) $\rightarrow$ **CHỈNH SỬA:** Em thay thế toàn bộ 6 OU giả tưởng này bằng 6 OU thực tế của phòng khám (`BacSi`, `YTa`, `LeTan`, `IT_Admin`, `ServiceAccounts`, `Servers`) nằm dưới `DC=clinic,DC=local`.
+* `"trusts"` (`Bidirectional`, `ParentChild`, `sid_filtering: false`) & block của `"north.sevenkingdoms.local"` (`dc02`) $\rightarrow$ **LƯỢC BỎ:** Kiến trúc hạ tầng phòng khám trong đồ án của em là Single-domain (1 DC duy nhất), nên các cấu hình Forest trust Parent-Child đa DC hoàn toàn không cần thiết.
+
+
+
+---
+
+#### BLOCK 2: Khai báo `"computers"` / Định nghĩa Host Role (Dòng 66–135)
+
+```json
+  "computers": {
+    "dc01": {
+      "hostname": "kingslanding",
+      "domain": "sevenkingdoms.local",
+      "ip": "192.168.56.10",
+      "roles": ["dc", "adcs", "laps"],
+      "adcs_ca_name": "SEVENKINGDOMS-CA",
+      "adcs_templates": ["ESC1", "ESC2", "ESC3", "ESC4", "ESC8"],
+      "vulns": ["zerologon_patched", "printnightmare_off", "smb_signing_on"]
+    },
+    "dc02": {
+      "hostname": "winterfell",
+      "domain": "north.sevenkingdoms.local",
+      "ip": "192.168.56.11",
+      "dns": "192.168.56.10",
+      "roles": ["child_dc", "laps"],
+      "unconstrained_delegation": true,
+      "vulns": ["smb_signing_on", "PetitPotam"]
+    },
+    "srv02": {
+      "hostname": "castelblack",
+      "domain": "north.sevenkingdoms.local",
+      "ip": "192.168.56.22",
+      "dns": "192.168.56.11",
+      "roles": ["server", "iis", "mssql", "laps_client"],
+      "shares": {
+        "all": { "path": "C:\\shares\\all", "full_access": "Everyone" },
+        "public": { "path": "C:\\shares\\public", "read_access": "Domain Users" }
+      },
+      "mssql": {
+        "instance": "MSSQLSERVER",
+        "port": 1433,
+        "auth_mode": "Mixed",
+        "sa_password": "Password123!",
+        "impersonate_users": ["NORTH\\arya.stark"],
+        "execute_as_user": ["SEVENKINGDOMS\\samwell.tarly"],
+        "xp_cmdshell_allowed": true
+      },
+      "iis": {
+        "site_name": "CastelBlack_Web",
+        "port": 80,
+        "asp_upload_vuln": true
+      },
+      "constrained_delegation": {
+        "target_spns": ["cifs/winterfell.north.sevenkingdoms.local", "http/winterfell.north.sevenkingdoms.local"],
+        "protocol_transition": true
+      },
+      "vulns": ["smb_signing_off"]
+    }
+  },
+
+```
+
+* **Giải trình chi tiết từng thành phần:**
+* Role `"dc"` của `dc01` + Role `"server"` / `"mssql"` của `srv02` $\rightarrow$ **GIỮ LẠI & GỘP CHUNG:** Tích hợp cả 3 vai trò này vào chung con EC2 của đồ án (`CLINIC-DC01-SRV02`).
+* `srv02.shares` (`"all"`, `"public"`) $\rightarrow$ **GIỮ CƠ CHẾ & SỬA:** Em giữ lại việc tạo SMB Share bằng PowerShell (`New-SmbShare` với `"FullAccess": "Everyone"`), nhưng đổi đường dẫn thành `C:\HoSoBenhAn_XML` (Share name `BenhAn$`) để đóng vai trò làm thư mục lưu trữ file XML Bảo hiểm y tế (theo Quyết định 130/QĐ-BYT).
+* `srv02.mssql` (`instance: MSSQLSERVER`, `port: 1433`, `impersonate_users`, `execute_as_user`, `xp_cmdshell_allowed`) $\rightarrow$ **GIỮ CƠ CHẾ & SỬA:** Giữ nguyên port 1433, giữ logic leo thang đặc quyền qua AD login, và quan trọng nhất là giữ tùy chọn `xp_cmdshell` (để trigger **Event ID 15457**). Em map quyền của `arya.stark`/`samwell.tarly` sang tài khoản `CLINIC\SVC_HIS_SQL`, thêm database `HIS_ClinicDB` và cấu hình `SERVER AUDIT TO APPLICATION_LOG` (để lấy log **Event ID 33205**).
+* Khai báo lỗi thời: `dc01.adcs_templates` (`ESC1`..`ESC8`), máy `dc02` (`winterfell`, `unconstrained_delegation`, `PetitPotam`), `srv02.iis` (`asp_upload_vuln`), `srv02.constrained_delegation`, và tính năng `laps` $\rightarrow$ **LƯỢC BỎ:** Các lỗ hổng này không khớp với 3 kịch bản tấn công ADSI/LDAP (Event 1644), Kerberoasting (Event 4769 mã hóa `0x17` vs `0x12`), và MS SQL Server (Event 15457/33205) mà đồ án focus nên em dọn sạch để đỡ sinh noise không cần thiết.
+
+
+
+---
+
+#### BLOCK 3: Object `"groups"` trên toàn hạ tầng (Dòng 136–205)
+
+```json
+  "groups": {
+    "sevenkingdoms.local": {
+      "Crownlands": { "scope": "Global", "category": "Security", "path": "OU=Crownlands,DC=sevenkingdoms,DC=local", "description": "People of the Crownlands" },
+      "KingsLanding": { "scope": "Global", "category": "Security", "path": "OU=KingsLanding,DC=sevenkingdoms,DC=local", "description": "People of KingsLanding" },
+      "Dragonstone": { "scope": "Global", "category": "Security", "path": "OU=Dragonstone,DC=sevenkingdoms,DC=local", "description": "People of Dragonstone" },
+      "NarrowSea": { "scope": "Global", "category": "Security", "path": "OU=NarrowSea,DC=sevenkingdoms,DC=local", "description": "Across the Narrow Sea" },
+      "Baratheon": { "scope": "Global", "category": "Security", "path": "OU=Crownlands,DC=sevenkingdoms,DC=local", "description": "House Baratheon" },
+      "Lannister": { "scope": "Global", "category": "Security", "path": "OU=KingsLanding,DC=sevenkingdoms,DC=local", "description": "House Lannister" },
+      "Small Council": { "scope": "Global", "category": "Security", "path": "OU=KingsLanding,DC=sevenkingdoms,DC=local", "description": "Advisors to the King" },
+      "Kingsguard": { "scope": "Global", "category": "Security", "path": "OU=KingsLanding,DC=sevenkingdoms,DC=local", "description": "Royal Bodyguards" },
+      "Dragons": { "scope": "Global", "category": "Security", "path": "OU=Dragonstone,DC=sevenkingdoms,DC=local", "description": "Dragonstone group" }
+    },
+    "north.sevenkingdoms.local": {
+      "Winterfell": { "scope": "Global", "category": "Security", "path": "OU=Winterfell,DC=north,DC=sevenkingdoms,DC=local", "description": "People of Winterfell" },
+      "TheWall": { "scope": "Global", "category": "Security", "path": "OU=TheWall,DC=north,DC=sevenkingdoms,DC=local", "description": "People of The Wall" },
+      "Stark": { "scope": "Global", "category": "Security", "path": "OU=Winterfell,DC=north,DC=sevenkingdoms,DC=local", "description": "House Stark" },
+      "NightWatch": { "scope": "Global", "category": "Security", "path": "OU=TheWall,DC=north,DC=sevenkingdoms,DC=local", "description": "Night Watch brothers" },
+      "Mormont": { "scope": "Global", "category": "Security", "path": "OU=TheWall,DC=north,DC=sevenkingdoms,DC=local", "description": "House Mormont" }
+    }
+  },
+
+```
+
+* **Giải trình chi tiết từng thành phần:**
+* 14 Group mặc định (`Crownlands`, `KingsLanding`, `Baratheon`, `Lannister`, `Stark`, `Winterfell`, v.v.) $\rightarrow$ **CHỈNH SỬA:** Em map 1:1 sang hệ thống phân quyền (RBAC) của bệnh án điện tử, tạo ra các Global Security Group mới gồm: `GRP_BacSi`, `GRP_YTa`, `GRP_LeTan`, `GRP_IT_Admin`, `GRP_HIS_Services`. Ngoài ra, đồ án giữ lại build-in group `Domain Admins` (do group này có thuộc tính `adminCount=1`) để khi chạy script ADSI/SharpHound quét truy vấn LDAP filter `(&(objectCategory=person)(objectClass=user)(adminCount=1))` sẽ sinh ra log **Event ID 1644** chuẩn xác trên Event Viewer.
+
+
+
+---
+
+#### BLOCK 4: Các `"users"` thuộc `sevenkingdoms.local` (Dòng 206–305)
+
+```json
+  "users": {
+    "sevenkingdoms.local": {
+      "robert.baratheon": {
+        "firstname": "Robert", "surname": "Baratheon",
+        "password": "darkwingsdarkwords",
+        "ou": "KingsLanding",
+        "groups": ["Domain Admins", "Small Council", "Baratheon", "Crownlands", "KingsLanding"],
+        "description": "King of the Andals and the First Men"
+      },
+      "cersei.lannister": { ... },
+      "jaime.lannister": { ... },
+      "joffrey.baratheon": { ... },
+      "tywin.lannister": {
+        "firstname": "Tywin", "surname": "Lannister",
+        "password": "alannisteralwayspayshisdebts",
+        "ou": "Crownlands",
+        "groups": ["Small Council", "Lannister", "Crownlands"],
+        "description": "Hand of the King - password is alannisteralwayspayshisdebts"
+      },
+      "petyr.baelish": { ... },
+      "varys": {
+        "firstname": "Lord", "surname": "Varys",
+        "password": "littlebirds",
+        "ou": "KingsLanding",
+        "groups": ["Small Council", "KingsLanding"],
+        "spn": ["http/kingslanding.sevenkingdoms.local"],
+        "description": "Master of Whisperers"
+      },
+      "pycelle": {
+        "firstname": "Grand Maester", "surname": "Pycelle",
+        "password": "maester",
+        "ou": "KingsLanding",
+        "groups": ["Small Council", "KingsLanding"],
+        "spn": ["ldap/kingslanding.sevenkingdoms.local"],
+        "description": "Grand Maester"
+      },
+      "renly.baratheon": { ... },
+      "stannis.baratheon": { ... },
+      "melisandre": { ... },
+      "davos.seaworth": { ... },
+      "barristan.selmy": { ... }
+    },
+
+```
+
+* **Giải trình chi tiết từng thành phần:**
+* `robert.baratheon` (`Domain Admins`) $\rightarrow$ **CHỈNH SỬA:** Được map sang `IT_Admin01` và `IT_Admin02` nằm trong `OU=IT_Admin` (đóng vai trò là các admin hợp lệ để đồ án có baseline whitelist khi viết Sigma Rule V4).
+* `varys` & `pycelle` (Sở hữu attribute `"spn"`) $\rightarrow$ **GIỮ CƠ CHẾ, GỘP VÀO `SVC_HIS_SQL`:** Logic gán SPN được em tái sử dụng nhưng chuyển mục tiêu sang hệ thống database bệnh án với SPN `MSSQLSvc/SRV02.clinic.local:1433`.
+* `tywin.lannister` (Lộ mật khẩu clear-text trong field `description`) $\rightarrow$ **GIỮ NGUYÊN CƠ CHẾ:** Áp dụng y hệt thủ thuật này vào mô tả tài khoản `SVC_HIS_Sync`, giúp kịch bản dò quét AD (Scenario 1) bằng ADSI tìm ra được metadata nhạy cảm thực tế trong ngữ cảnh vận hành phòng khám.
+* 9 nhân vật còn lại (`cersei`, `jaime`, `joffrey`, `petyr`...) $\rightarrow$ **SỬA & NHÂN BẢN:** Từ bộ khung user này, em viết script tự động gen ra **195 tài khoản nhân sự phòng khám** (`BS_BacSi001..060`, `YT_YTa001..100`, `LT_LeTan001..035`) để đáp ứng đủ số lượng 200 account giả lập nhiễu log (noise generation) mà đồ án yêu cầu.
+
+
+
+---
+
+#### BLOCK 5: Các `"users"` thuộc `north.sevenkingdoms.local` (Dòng 306–385)
+
+```json
+    "north.sevenkingdoms.local": {
+      "eddard.stark": { ... },
+      "catelyn.stark": { ... },
+      "robb.stark": { ... },
+      "sansa.stark": { ... },
+      "arya.stark": {
+        "firstname": "Arya", "surname": "Stark",
+        "password": "needle",
+        "ou": "Winterfell",
+        "groups": ["Stark", "Winterfell"],
+        "description": "No One"
+      },
+      "brandon.stark": {
+        "firstname": "Brandon", "surname": "Stark",
+        "password": "iseedeadpeople",
+        "ou": "Winterfell",
+        "groups": ["Stark", "Winterfell"],
+        "dont_req_preauth": true,
+        "description": "The Three-Eyed Raven"
+      },
+      "rickon.stark": { ... },
+      "hodor": { ... },
+      "jeor.mormont": { ... },
+      "jon.snow": {
+        "firstname": "Jon", "surname": "Snow",
+        "password": "iknownothing",
+        "ou": "TheWall",
+        "groups": ["NightWatch", "Stark", "TheWall"],
+        "spn": ["MSSQLSvc/castelblack.north.sevenkingdoms.local:1433"],
+        "description": "998th Lord Commander of the Night's Watch"
+      },
+      "samwell.tarly": { ... }
+    }
+  },
+
+```
+
+* **Giải trình chi tiết từng thành phần:**
+* `jon.snow` (`"spn": ["MSSQLSvc/castelblack...1433"]`, mật khẩu yếu `"iknownothing"`) $\rightarrow$ **GIỮ 100% CƠ CHẾ, ĐỔI TÊN:** Đổi tên thành **`SVC_HIS_SQL`** (mang SPN `MSSQLSvc/SRV02.clinic.local:1433`, password `Password123!`). Đồng thời em gắn thêm tham số `-KerberosEncryptionType RC4,AES128,AES256` để phục vụ riêng cho Kịch bản tấn công số 2 (Test downgrade mã hóa Kerberos `0x17` bypass OpSec chuẩn `0x12`).
+* `brandon.stark` (Thuộc tính `"dont_req_preauth": true`) $\rightarrow$ **GIỮ 100% CƠ CHẾ, ĐỔI TÊN:** Đổi thành account **`SVC_Backup_Legacy`** và dùng PowerShell cấp quyền qua cờ `Set-ADAccountControl -DoesNotRequirePreAuth $true` phục vụ test AS-REP Roasting.
+* `arya.stark` & `samwell.tarly` (Các user có quyền đăng nhập MSSQL trên `srv02`) $\rightarrow$ **GIỮ CƠ CHẾ, GỘP QUYỀN:** Chuyển các quyền này vào `SVC_HIS_SQL` và `SVC_HIS_Sync` để test Kịch bản số 3 (Truy vấn lén `SELECT/DELETE` database bệnh án, chạy `xp_cmdshell` Event 15457, và hành vi cố tình tắt SQL Audit sinh Event 33205).
+* 7 user Stark/Wall còn lại $\rightarrow$ **CHỈNH SỬA:** Được em hòa chung vào tập script tự động gen 200 tài khoản bác sĩ/y tá của hệ thống phòng khám.
+
+
+
+---
+
+#### BLOCK 6: `"acls"` / `"dacls"`, `"local_admins"`, và `"gpos"` (Dòng 386–450)
+
+```json
+  "acls": {
+    "sevenkingdoms.local": [
+      { "principal": "stannis.baratheon", "target": "renly.baratheon", "right": "GenericAll" },
+      { "principal": "tywin.lannister", "target": "jaime.lannister", "right": "ForceChangePassword" },
+      { "principal": "cersei.lannister", "target": "joffrey.baratheon", "right": "GenericWrite" },
+      { "principal": "petyr.baelish", "target": "Small Council", "right": "WriteDacl" },
+      { "principal": "Dragonstone", "target": "Crownlands", "right": "WriteProperty" }
+    ],
+    "north.sevenkingdoms.local": [
+      { "principal": "jeor.mormont", "target": "jon.snow", "right": "ForceChangePassword" },
+      { "principal": "samwell.tarly", "target": "Domain Admins", "right": "WriteDacl" },
+      { "principal": "Stark", "target": " hodor", "right": "GenericAll" }
+    ]
+  },
+  "local_groups": {
+    "srv02": {
+      "Administrators": ["NORTH\\jon.snow", "NORTH\\Eddard.Stark"],
+      "Remote Desktop Users": ["NORTH\\Stark", "NORTH\\samwell.tarly", "SEVENKINGDOMS\\Lannister"]
+    },
+    "dc02": {
+      "Remote Desktop Users": ["NORTH\\Stark"]
+    }
+  },
+  "gpos": {
+    "disable_defender": { "target_ou": "Root", "enabled": true },
+    "enable_rdp": { "target_ou": "Root", "enabled": true },
+    "laps_gpo": { "target_ou": "Root", "enabled": true }
+  }
+}
+
+```
+
+* **Giải trình chi tiết từng thành phần:**
+* `"acls"` (Các đường link BloodHound DACL phức tạp như `GenericAll`, `ForceChangePassword`, `WriteDacl`...) $\rightarrow$ **LƯỢC BỎ:** Thay đổi và lạm dụng object DACL thuộc về mảng giải đố leo quyền CTF (dựng graph BloodHound). Đồ án của em focus vào việc phát hiện truy xuất **discovery** (ADSI/LDAP sinh Event ID 1644) chứ không phải hành vi thay đổi **modification** DACL (sinh Event ID 5136), nên lược bỏ mảng này để đỡ nặng hệ thống.
+* `"local_groups"` (`srv02.Administrators`, `Remote Desktop Users`) $\rightarrow$ **GIỮ CƠ CHẾ & SỬA:** Cấp quyền đăng nhập nội bộ cho các tài khoản `SVC_HIS_SQL`, `GRP_BacSi` và `GRP_YTa`. Nhờ đó tool sinh log tự động có thể tạo ra các traffic đăng nhập thật (phiên đổi ca trực Event ID 4624/4625) một cách trơn tru.
+* `"gpos"` (`disable_defender`, `enable_rdp`, `laps_gpo`):
+* `enable_rdp` $\rightarrow$ **GIỮ LẠI:** Được em cấu hình trên EC2 AWS luôn để có thể kết nối `mstsc.exe` qua port 3389 vào hệ thống.
+* `disable_defender` $\rightarrow$ **CHỈNH SỬA:** Thay vì tắt hẳn Windows Defender qua GPO, em dùng lệnh PowerShell `Add-MpPreference -ExclusionPath "C:\Tools"` để exclude mỗi thư mục chứa đồ nghề. Việc này giúp Defender trên OS vẫn hoạt động ổn định nhưng không chém nhầm mất file `Rubeus.exe` hay script ADSI của em.
+* `laps_gpo` $\rightarrow$ **LƯỢC BỎ:** Giải pháp LAPS không nằm trong ngữ cảnh cần thiết lập cho đồ án lần này.
+
+---

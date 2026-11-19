@@ -1,0 +1,88 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+# ==============================================================================
+# ĐỒ ÁN TỐT NGHIỆP KỲ 2026.1 - ĐẠI HỌC BÁCH KHOA HÀ NỘI (HUST)
+# Sinh viên thực hiện: Vũ Thúy Hường - MSSV: 20225135
+# Mô tả: Khai báo IaC Vagrant triển khai 3 máy ảo GOAD-Light Clinic Edition:
+#        1. DC01  (192.168.56.10) - Domain Controller (clinic.local)
+#        2. SRV02 (192.168.56.22) - HIS Database (MSSQL) & File Server (BenhAn$)
+#        3. WS01  (192.168.56.30) - Clinic Workstation (Patient Zero & Noise Gen)
+# ==============================================================================
+
+boxes = [
+  {
+    :name => "dc01",
+    :hostname => "DC01",
+    :ip => "192.168.56.10",
+    :box => "stefanring/windows-server-2022",
+    :os => "windows",
+    :ram => 4096,
+    :cpu => 2
+  },
+  {
+    :name => "srv02",
+    :hostname => "SRV02",
+    :ip => "192.168.56.22",
+    :box => "stefanring/windows-server-2022",
+    :os => "windows",
+    :ram => 4096,
+    :cpu => 2
+  },
+  {
+    :name => "ws01",
+    :hostname => "WS01",
+    :ip => "192.168.56.30",
+    :box => "stefanring/windows-server-2022",
+    :os => "windows",
+    :ram => 3072,
+    :cpu => 2
+  }
+]
+
+Vagrant.configure("2") do |config|
+  # Tắt tự động cập nhật Vagrant Box để đảm bảo tính tất định (Deterministic)
+  config.vm.box_check_update = false
+
+  boxes.each do |opts|
+    config.vm.define opts[:name] do | machine |
+      machine.vm.box = opts[:box]
+      machine.vm.guest = :windows
+      machine.vm.communicator = "winrm"
+      machine.winrm.username = "vagrant"
+      machine.winrm.password = "vagrant"
+      machine.winrm.transport = :plaintext
+      machine.winrm.basic_auth_only = true
+      machine.vm.boot_timeout = 600
+
+      # Cấu hình cổng chuyển tiếp WinRM & RDP
+      machine.vm.network :forwarded_port, guest: 3389, host: 3389, id: "rdp", auto_correct: true
+      machine.vm.network :forwarded_port, guest: 5985, host: 5985, id: "winrm", auto_correct: true
+
+      # Cấu hình mạng nội bộ phòng khám (Host-Only Subnet 192.168.56.0/24)
+      machine.vm.network :private_network, ip: opts[:ip]
+
+      # Ánh xạ (Mount) toàn bộ kho mã nguồn ĐATN vào C:\HUST-DATN-20261-AD-Clinic-Detection
+      machine.vm.synced_folder "../../", "/HUST-DATN-20261-AD-Clinic-Detection"
+
+      # Cấu hình tài nguyên phần cứng VirtualBox
+      machine.vm.provider :virtualbox do |v|
+        v.name = "GOAD_Clinic_#{opts[:hostname]}"
+        v.memory = opts[:ram]
+        v.cpus = opts[:cpu]
+        v.gui = false
+        v.customize ["modifyvm", :id, "--vram", "32"]
+        v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+        v.customize ["modifyvm", :id, "--clipboard", "bidirectional"]
+      end
+
+      # Thiết lập Windows Defender Exclusion ngay khi khởi tạo máy ảo
+      machine.vm.provision "shell", inline: <<-SHELL
+        New-Item -Path "C:\\Tools" -ItemType Directory -Force | Out-Null
+        Add-MpPreference -ExclusionPath "C:\\Tools" -ErrorAction SilentlyContinue
+        Add-MpPreference -ExclusionPath "C:\\HUST-DATN-20261-AD-Clinic-Detection" -ErrorAction SilentlyContinue
+        winrm set winrm/config/service '@{AllowUnencrypted="true"}'
+        winrm set winrm/config/service/auth '@{Basic="true"}'
+      SHELL
+    end
+  end
+end

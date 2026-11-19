@@ -1,0 +1,18 @@
+Windows Registry Editor Version 5.00
+
+; ==============================================================================
+; ĐỒ ÁN TỐT NGHIỆP KỲ 2026.1 - ĐẠI HỌC BÁCH KHOA HÀ NỘI (HUST)
+; Sinh viên thực hiện: Vũ Thúy Hường - MSSV: 20225135
+; Mô tả: Kích hoạt ghi vết chi tiết truy vấn LDAP Active Directory (Event ID 1644)
+;        và hạ ngưỡng tìm kiếm xuống 1 để bắt kỹ thuật dò quét chậm qua ADSI [9], [10].
+; ==============================================================================
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\NTDS\Diagnostics]
+"15 Field Engineering"=dword:00000005
+"Expensive Search Results Threshold"=dword:00000001
+"Inefficient Search Results Threshold"=dword:00000001
+
+[HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\NTDS\Parameters]
+"Expensive Search Results Threshold"=dword:00000001
+"Inefficient Search Results Threshold"=dword:00000001
+"Search Time Threshold (msecs)"=dword:00000001

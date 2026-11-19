@@ -1,0 +1,6 @@
+## Giới hạn bộ nhớ Heap của JVM ở mức 1.5GB để tránh tràn RAM (OOM) trên laptop 8GB
+-Xms1536m
+-Xmx1536m
+-XX:+UseG1GC
+-XX:G1ReservePercent=25
+-XX:InitiatingHeapOccupancyPercent=30

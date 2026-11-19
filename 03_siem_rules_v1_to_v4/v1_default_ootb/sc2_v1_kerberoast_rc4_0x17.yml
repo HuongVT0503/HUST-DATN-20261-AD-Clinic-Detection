@@ -1,0 +1,27 @@
+title: "[SC2-V1] Phát hiện Kerberoasting Mặc định qua Hạ cấp Mã hóa RC4-HMAC (0x17)"
+id: 11111111-0002-4001-a001-000000000002
+status: stable
+description: >
+  Phiên bản V1 (Kế thừa từ SigmaHQ win_security_kerberoasting.yml): Bắt Event ID 4769 có
+  TicketEncryptionType = 0x17 (RC4-HMAC).
+  Điểm mù: Bỏ lọt hoàn toàn Kịch bản 2B khi kẻ tấn công dùng kỹ thuật OpSec yêu cầu vé AES256 (0x12).
+author: "Vũ Thúy Hường (20225135 - HUST)"
+date: 2026/11/15
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4769
+    TicketOptions: '0x40810000'
+    TicketEncryptionType: '0x17'
+  filter_machine_and_krbtgt:
+    ServiceName|startswith: 'krbtgt'
+    ServiceName|endswith: '$'
+  condition: selection and not filter_machine_and_krbtgt
+falsepositives:
+  - "Các thiết bị hoặc phần mềm kế thừa cũ chỉ hỗ trợ mã hóa RC4."
+level: high
+tags:
+  - attack.credential_access
+  - attack.t1558.003

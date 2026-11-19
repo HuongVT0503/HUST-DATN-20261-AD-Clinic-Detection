@@ -1,0 +1,26 @@
+# ==============================================================================
+# Tệp: 02_telemetry_and_scenarios/telemetry_configs/winlogbeat_evtx_replay.yml
+# Mô tả: Cấu hình Winlogbeat nạp tĩnh (Deterministic Replay) 3 tệp .evtx chuẩn
+#        vào cụm Elasticsearch Single-node trên WSL2 Docker.
+# Cách chạy: .\winlogbeat.exe -e -c winlogbeat_evtx_replay.yml -E EVTX_FILE="C:\path\to\file.evtx"
+# ==============================================================================
+
+winlogbeat.event_logs:
+  - name: ${EVTX_FILE}
+    no_more_events: stop
+
+setup.template.settings:
+  index.number_of_shards: 1
+
+output.elasticsearch:
+  hosts: ["http://localhost:9200"]
+  index: "winlogbeat-clinic-replay-%{+yyyy.MM.dd}"
+
+processors:
+  - add_R_metadata: ~
+  - add_fields:
+      target: clinic_lab
+      fields:
+        environment: "GOAD-Light-Clinic-Edition"
+        domain: "clinic.local"
+        compliance_framework: "TT13_2025_BYT_AND_PDPL_91_2025"

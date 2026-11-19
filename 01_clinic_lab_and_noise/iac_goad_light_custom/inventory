@@ -1,0 +1,80 @@
+; ==============================================================================
+; ĐỒ ÁN TỐT NGHIỆP KỲ 2026.1 - ĐẠI HỌC BÁCH KHOA HÀ NỘI (HUST)
+; Sinh viên thực hiện: Vũ Thúy Hường - MSSV: 20225135
+; Tệp cấu hình Ansible Inventory cho kiến trúc 3 nút mạng Phòng khám (clinic.local)
+; (Lưu ý: Nếu chạy Ansible hướng tới AWS EC2, thay 192.168.56.x bằng IP của EC2)
+; ==============================================================================
+
+[default]
+dc01  ansible_host=192.168.56.10 hostname=DC01  dns_domain=dc01 dict_key=dc01
+srv02 ansible_host=192.168.56.22 hostname=SRV02 dns_domain=dc01 dict_key=srv02
+ws01  ansible_host=192.168.56.30 hostname=WS01  dns_domain=dc01 dict_key=ws01
+
+; ==============================================================================
+; PHÂN NHÓM VAI TRÒ HỆ THỐNG (HOST ROLE GROUPS)
+; ==============================================================================
+[domain]
+dc01
+srv02
+ws01
+
+[parent_dc]
+dc01
+
+[dc]
+dc01
+
+[member]
+srv02
+ws01
+
+[server]
+srv02
+
+[mssql]
+srv02
+
+[smb_his]
+srv02
+
+[workstation]
+ws01
+
+[sysmon_nodes]
+dc01
+srv02
+ws01
+
+; ==============================================================================
+; BIẾN MÔI TRƯỜNG TOÀN CỤC CHO MIỀN PHÒNG KHÁM ([all:vars])
+; ==============================================================================
+[all:vars]
+lab_name=GOAD-Light-Clinic-Edition
+domain_name=clinic.local
+netbios_name=CLINIC
+domain_admin_user=CLINIC\Administrator
+domain_admin_pass=P@ssw0rd123!
+dsrm_password=P@ssw0rd123!
+dc01_ip=192.168.56.10
+srv02_ip=192.168.56.22
+ws01_ip=192.168.56.30
+
+; Đường dẫn kho mã nguồn trên máy ảo đích
+repo_guest_path=C:\HUST-DATN-20261-AD-Clinic-Detection
+
+; Tài khoản dịch vụ trọng tâm của đồ án
+his_sql_svc_account=SVC_HIS_Database
+his_sync_svc_account=SVC_HIS_Sync
+his_backup_svc_account=SVC_Backup_Legacy
+his_database_name=HIS_ClinicDB
+his_smb_share_name=BenhAn$
+
+; Cấu hình giao thức quản trị WinRM cho Ansible
+ansible_user=vagrant
+ansible_password=vagrant
+ansible_connection=winrm
+ansible_winrm_server_cert_validation=ignore
+ansible_winrm_operation_timeout_sec=240
+ansible_winrm_read_timeout_sec=300
+ansible_winrm_transport=basic
+ansible_port=5985

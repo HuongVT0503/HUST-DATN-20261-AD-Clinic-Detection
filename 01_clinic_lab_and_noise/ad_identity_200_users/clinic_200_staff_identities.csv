@@ -1,0 +1,11 @@
+SamAccountName,GivenName,Surname,DisplayName,Title,Department,OU,Group,Password,IsServiceAccount,SPN,Description
+SVC_HIS_Database,SVC,HIS_Database,HIS SQL Server Database Service,Service Account,He Thong HIS,ServiceAccounts,GRP_HIS_Services,Password123!,TRUE,MSSQLSvc/SRV02.clinic.local:1433,Tai khoan dich vu ket noi CSDL Benh an Dien tu HIS tren SRV02 [TT 13/2025/TT-BYT]
+SVC_HIS_Sync,SVC,HIS_Sync,BHYT XML Gateway Sync Service,Service Account,He Thong BHYT,ServiceAccounts,GRP_HIS_Services,Password123!,TRUE,,Tai khoan dong bo XML BHYT QD130/QD4750 - Mat khau tam: Password123!
+SVC_Backup_Legacy,SVC,Backup_Legacy,Legacy EMR Backup Service,Service Account,He Thong Backup,ServiceAccounts,GRP_HIS_Services,Password123!,TRUE,,Tai khoan sao luu du lieu benh an cu (AS-REP Roasting Lab)
+IT_Admin01,Admin01,IT,Chuyen vien CNTT 01,IT Administrator,To CNTT & An Ninh,IT_Admin,GRP_IT_Admin,Clinic@2026!,FALSE,,Quan tri vien he thong Active Directory va SIEM Phong kham
+IT_Admin02,Admin02,IT,Chuyen vien CNTT 02,IT Administrator,To CNTT & An Ninh,IT_Admin,GRP_IT_Admin,Clinic@2026!,FALSE,,Quan tri vien ha tang mang va CSDL HIS Phong kham
+BS_BacSi001,BacSi001,Nguyen,Bac si Nguyen Van An (001),Bac si Kham benh,Khoa Kham Benh,BacSi,GRP_BacSi,Clinic@2026!,FALSE,,Bac si dieu tri noi khoa co chung chi hanh nghe
+BS_BacSi002,BacSi002,Tran,Bac si Tran Thi Binh (002),Bac si Kham benh,Khoa Noi Tong Quat,BacSi,GRP_BacSi,Clinic@2026!,FALSE,,Bac si dieu tri noi khoa co chung chi hanh nghe
+YT_YTa001,YTa001,Le,Dieu duong Le Hoang Cuong (001),Dieu duong vien,Khoa Dieu Duong,YTa,GRP_YTa,Clinic@2026!,FALSE,,Dieu duong cham soc benh nhan theo ca truc
+YT_YTa002,YTa002,Pham,Dieu duong Pham Thu Dung (002),Dieu duong vien,Khoa Dieu Duong,YTa,GRP_YTa,Clinic@2026!,FALSE,,Dieu duong cham soc benh nhan theo ca truc
+LT_LeTan001,LeTan001,Hoang,Le tan Hoang Minh Giang (001),Nhan vien Tiep don,Phong Tiep Don - Thu Ngan,LeTan,GRP_LeTan,Clinic@2026!,FALSE,,Nhan vien tiep don va dang ky kham BHYT tai quay WS01
