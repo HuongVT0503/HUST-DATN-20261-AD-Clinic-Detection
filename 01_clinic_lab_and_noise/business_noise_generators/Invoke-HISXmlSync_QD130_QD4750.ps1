@@ -29,13 +29,13 @@ for ($cycle = 1; $cycle -le $SyncCycles; $cycle++) {
     $Searcher = [adsisearcher]"(&(objectCategory=person)(objectClass=user)(department=Khoa Kham Benh))"
     $Searcher.PageSize = 5
     $null = $Searcher.FindOne()
-    Write-Host "  [1] Đã thực hiện 1 truy vấn LDAP hợp lệ kiểm tra danh mục Khoa Khám Bệnh (Event 1644)." -ForegroundColor Gray
+    Write-Host "   Đã thực hiện 1 truy vấn LDAP hợp lệ kiểm tra danh mục Khoa Khám Bệnh (Event 1644)." -ForegroundColor Gray
 
     # 2. Bác sĩ / Phần mềm HIS tra cứu lẻ 1 hồ sơ bệnh án cụ thể trên SQL Server (Sinh Event ID 33205 hợp lệ)
     $RandomID = "BA2026_{0:D4}" -f (Get-Random -Minimum 1 -Maximum 50)
     $SingleQuery = "SET NOCOUNT ON; SELECT MaBenhAn, HoTen, ChanDoanICD10, DaKySoTT13 FROM HIS_ClinicDB.dbo.HoSoBenhAn WHERE MaBenhAn = '$RandomID';"
     sqlcmd -S $TargetServer -U $SyncUser -P $SyncPass -Q $SingleQuery 2>$null | Out-Null
-    Write-Host "  [2] Tra cứu lẻ 01 hồ sơ bệnh án ($RandomID) trên $TargetServer (Event 33205)." -ForegroundColor Green
+    Write-Host "   Tra cứu lẻ 01 hồ sơ bệnh án ($RandomID) trên $TargetServer (Event 33205)." -ForegroundColor Green
 
     # 3. Đồng bộ tệp XML BHYT theo Quyết định 130/QĐ-BYT qua SMB Share \\SRV02\BenhAn$ (Sinh Event 5140/5145)
     net use $SharePath $SyncPass /user:"$DomainName\$SyncUser" 2>$null | Out-Null
@@ -46,7 +46,7 @@ for ($cycle = 1; $cycle -le $SyncCycles; $cycle++) {
         }
         $SyncLogFile = Join-Path $SharePath ("HIS_Sync_Heartbeat_{0:D2}.xml" -f ($cycle % 5))
         "<SYNC_STATUS><TIME>$(Get-Date -Format 'o')</TIME><ACCOUNT>$SyncUser</ACCOUNT><STANDARD>QD130_QD4750_BYT</STANDARD></SYNC_STATUS>" | Set-Content -Path $SyncLogFile -Encoding UTF8
-        Write-Host "  [3] Đồng bộ thành công tệp XML BHYT qua SMB Share $SharePath (Event 5140/5145)." -ForegroundColor Green
+        Write-Host "   Đồng bộ thành công tệp XML BHYT qua SMB Share $SharePath (Event 5140/5145)." -ForegroundColor Green
     }
     net use $SharePath /delete /y 2>$null | Out-Null
 

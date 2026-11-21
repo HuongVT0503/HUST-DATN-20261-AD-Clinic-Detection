@@ -2,7 +2,7 @@
 ================================================================================
 Tệp: 01_clinic_lab_and_noise/his_mssql_database/Configure_SQL_Server_Audit_33205.sql
 Mô tả: Kích hoạt cơ chế ghi vết kiểm toán SQL Server Audit đẩy vào Windows Application
-       Event Log (Event ID 33205) phục vụ giám sát theo Thông tư 13/2025/TT-BYT [4], [6].
+       Event Log (Event ID 33205) phục vụ giám sát theo Thông tư 13/2025/TT-BYT , .
 ================================================================================
 */
 

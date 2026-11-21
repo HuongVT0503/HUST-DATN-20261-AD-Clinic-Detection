@@ -151,7 +151,7 @@ foreach ($ou in $clinicOUs) {
 * **LOẠI BỎ (Drop):** Bỏ tên các nhân vật `jon.snow`, `brandon.stark`, `arya.stark` và bỏ các mật khẩu từ điển tiếng Anh rời rạc không liên quan đến y tế.
 * **CHỈNH SỬA (Modify):**
 * Nhân bản (Scale-up) số lượng user từ ~15 nhân vật phim trong GOAD-Light lên **200 định danh nhân sự** (`BS_BacSi001`..`060`, `YT_YTa001`..`100`, `LT_LeTan001`..`035`...).
-* Đổi tên `jon.snow` (tài khoản dịch vụ SQL bị Kerberoast) thành **`SVC_HIS_SQL`** gắn SPN `MSSQLSvc/SRV02.clinic.local:1433`.
+* Đổi tên `jon.snow` (tài khoản dịch vụ SQL bị Kerberoast) thành **`SVC_HIS_Database`** gắn SPN `MSSQLSvc/SRV02.clinic.local:1433`.
 * **Bổ sung kỹ thuật cho Kịch bản 2 của PGNV:** Trong GOAD-Light gốc, tài khoản `jon.snow` để cấu hình mã hóa mặc định. Để thực hiện được Kịch bản 2 (*"so sánh kỹ thuật hạ cấp mã hóa RC4 0x17 và kỹ thuật lẩn tránh OpSec dùng AES256 0x12"*), tooi bổ sung thêm tham số `-KerberosEncryptionType RC4,AES128,AES256` vào lệnh `Set-ADUser`.
 
 
@@ -168,13 +168,13 @@ $weakPass    = ConvertTo-SecureString "Password123!" -AsPlainText -Force
 1..35  | ForEach-Object { New-ADUser -Name ("LT_LeTan{0:D3}" -f $_) -SamAccountName ("LT_LeTan{0:D3}" -f $_) -UserPrincipalName ("LT_LeTan{0:D3}@clinic.local" -f $_) -Path "OU=LeTan,$domainDN" -AccountPassword $defaultPass -Enabled $true -PasswordNeverExpires $true }
 
 # [GIỮ NGUYÊN CƠ CHẾ TỪ config.json (user: jon.snow) & vulns/tasks/kerberoast.yml]
-# Đổi tên jon.snow -> SVC_HIS_SQL và castelblack -> SRV02.clinic.local
-New-ADUser -Name "SVC_HIS_SQL" -SamAccountName "SVC_HIS_SQL" -UserPrincipalName "SVC_HIS_SQL@clinic.local" `
+# Đổi tên jon.snow -> SVC_HIS_Database và castelblack -> SRV02.clinic.local
+New-ADUser -Name "SVC_HIS_Database" -SamAccountName "SVC_HIS_Database" -UserPrincipalName "SVC_HIS_Database@clinic.local" `
            -Path "OU=ServiceAccounts,$domainDN" -AccountPassword $weakPass -Enabled $true -PasswordNeverExpires $true
-Set-ADUser -Identity "SVC_HIS_SQL" -ServicePrincipalNames @{Add="MSSQLSvc/SRV02.clinic.local:1433"}
+Set-ADUser -Identity "SVC_HIS_Database" -ServicePrincipalNames @{Add="MSSQLSvc/SRV02.clinic.local:1433"}
 
 # [BỔ SUNG CHO PGNV NỘI DUNG 3: Cho phép cả RC4 (0x17) và AES256 (0x12) để test Evasion]
-Set-ADUser -Identity "SVC_HIS_SQL" -KerberosEncryptionType RC4,AES128,AES256
+Set-ADUser -Identity "SVC_HIS_Database" -KerberosEncryptionType RC4,AES128,AES256
 
 # [GIỮ NGUYÊN CƠ CHẾ TỪ config.json (user: brandon.stark) - Lỗ hổng AS-REP Roasting]
 New-ADUser -Name "SVC_Backup_Legacy" -SamAccountName "SVC_Backup_Legacy" -UserPrincipalName "SVC_Backup_Legacy@clinic.local" `
@@ -269,7 +269,7 @@ GRANT IMPERSONATE ON LOGIN::sa TO [NORTH\arya.stark];
 * **GIỮ LẠI (Keep):** Giữ nguyên cơ chế cài đặt MS SQL Server, tạo Windows Login từ tài khoản Active Directory và cấp quyền cao trên Database để kẻ tấn công (sau khi Kerberoast hoặc chiếm được tài khoản dịch vụ) có thể đăng nhập vào SQL, chạy lệnh **`sp_configure 'xp_cmdshell', 1`** (sinh **Event ID 15457**).
 * **LOẠI BỎ (Drop):** Không tạo DB rỗng không có dữ liệu như GOAD gốc.
 * **CHỈNH SỬA & BỔ SUNG (Modify & Add):**
-* Thay `NORTH\arya.stark` bằng tài khoản dịch vụ **`CLINIC\SVC_HIS_SQL`**.
+* Thay `NORTH\arya.stark` bằng tài khoản dịch vụ **`CLINIC\SVC_HIS_Database`**.
 * Tạo cơ sở dữ liệu **`HIS_ClinicDB`** và bảng **`HoSoBenhAn`** chứa dữ liệu bệnh nhân mẫu.
 * **Quan trọng nhất (Bổ sung so với GOAD-Light gốc):** Vì GOAD-Light là lab dành cho Red Team (chỉ dựng lỗ hổng để đi chiếm quyền), tác giả Mayfly **KHÔNG bật SQL Server Audit**. Nhưng ĐATN này là *Purple Team / Detection Engineering* theo **Thông tư 13/2025/TT-BYT** và **Nghị định 356/2025/NĐ-CP**, yêu cầu bắt được hành vi đọc/sửa/xóa trái phép bảng bệnh án và hành vi tắt kiểm toán (**Event ID 33205**). Do đó, tôi thêm khối lệnh T-SQL `CREATE SERVER AUDIT ... TO APPLICATION_LOG` vào kịch bản khởi tạo.
 
@@ -278,9 +278,9 @@ GRANT IMPERSONATE ON LOGIN::sa TO [NORTH\arya.stark];
 #### 4.3. Đoạn mã SQL / PowerShell sau khi chuyển đổi
 
 ```sql
--- [CHỈNH SỬA TỪ ansible/roles/mssql: Thay arya.stark bằng CLINIC\SVC_HIS_SQL và cấp quyền sysadmin]
-CREATE LOGIN [CLINIC\SVC_HIS_SQL] FROM WINDOWS;
-ALTER SERVER ROLE [sysadmin] ADD MEMBER [CLINIC\SVC_HIS_SQL];
+-- [CHỈNH SỬA TỪ ansible/roles/mssql: Thay arya.stark bằng CLINIC\SVC_HIS_Database và cấp quyền sysadmin]
+CREATE LOGIN [CLINIC\SVC_HIS_Database] FROM WINDOWS;
+ALTER SERVER ROLE [sysadmin] ADD MEMBER [CLINIC\SVC_HIS_Database];
 GO
 
 -- [BỔ SUNG CHO PGNV: Tạo CSDL Bệnh án điện tử HIS_ClinicDB]
@@ -331,6 +331,6 @@ GO
 | **Tên miền (Domain)** | `sevenkingdoms.local` & `north.sevenkingdoms.local` | **Sửa & Rút gọn** | `clinic.local` (1 Domain duy nhất) | Phù hợp quy mô phòng khám vừa và nhỏ (1-2 cơ sở dùng chung 1 miền nội bộ). |
 | **Đơn vị tổ chức (OUs)** | `KingsLanding`, `Winterfell`, `TheWall`, `Crownlands` | **Sửa** | `BacSi`, `YTa`, `LeTan`, `IT_Admin`, `ServiceAccounts` | Mô phỏng đúng cơ cấu phòng ban của cơ sở khám chữa bệnh. |
 | **Định danh người dùng** | ~15 nhân vật phim (*Jon Snow, Arya Stark, Samwell Tarly...*) | **Sửa & Mở rộng** | **200 tài khoản nhân sự** (`BS_BacSi001..060`, `YT_YTa001..100`...) | Đáp ứng quy mô ~200 nhân sự trong PGNV để chạy kịch bản sinh nhiễu giao ca thực tế. |
-| **Lỗ hổng Kerberoasting** | User `jon.snow` gắn SPN `MSSQLSvc/castelblack...:1433` | **Giữ cơ chế, Sửa tên & Thêm cờ** | User `SVC_HIS_SQL` gắn SPN `MSSQLSvc/SRV02.clinic.local:1433` (Hỗ trợ cả RC4 `0x17` & AES `0x12`) | Giữ nguyên kỹ thuật của GOAD-Light nhưng mở rộng mã hóa để thực nghiệm so sánh hạ cấp `0x17` và lẩn tránh `0x12`. |
+| **Lỗ hổng Kerberoasting** | User `jon.snow` gắn SPN `MSSQLSvc/castelblack...:1433` | **Giữ cơ chế, Sửa tên & Thêm cờ** | User `SVC_HIS_Database` gắn SPN `MSSQLSvc/SRV02.clinic.local:1433` (Hỗ trợ cả RC4 `0x17` & AES `0x12`) | Giữ nguyên kỹ thuật của GOAD-Light nhưng mở rộng mã hóa để thực nghiệm so sánh hạ cấp `0x17` và lẩn tránh `0x12`. |
 | **Dịch vụ SMB Share** | Share `C:\shares\all` (`FullAccess: Everyone`) | **Giữ cơ chế, Sửa nội dung** | Share `\\SRV02\BenhAn$` chứa các file XML BHYT mẫu | Phục vụ kịch bản đồng bộ hồ sơ BHYT theo QĐ 130/QĐ-BYT và 4750/QĐ-BYT. |
-| **Dịch vụ MS SQL Server** | Cài trên `SRV02`, cấp quyền `IMPERSONATE` cho `arya.stark`, **không bật Audit** | **Giữ lỗ hổng, Thêm DB & Bật Audit** | Cấp quyền cho `SVC_HIS_SQL`, tạo bảng `HoSoBenhAn` và bật `SERVER AUDIT TO APPLICATION_LOG` | Bắt buộc phải bật Audit về Application Log để sinh **Event ID 33205** và **15457** phục vụ kiểm thử luật SIEM V1–V4. |
+| **Dịch vụ MS SQL Server** | Cài trên `SRV02`, cấp quyền `IMPERSONATE` cho `arya.stark`, **không bật Audit** | **Giữ lỗ hổng, Thêm DB & Bật Audit** | Cấp quyền cho `SVC_HIS_Database`, tạo bảng `HoSoBenhAn` và bật `SERVER AUDIT TO APPLICATION_LOG` | Bắt buộc phải bật Audit về Application Log để sinh **Event ID 33205** và **15457** phục vụ kiểm thử luật SIEM V1–V4. |

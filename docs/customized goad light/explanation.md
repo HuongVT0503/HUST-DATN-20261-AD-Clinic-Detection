@@ -19,7 +19,7 @@ Dưới đây là bảng kiểm toán không bỏ sót tệp hay thư mục nào
 | **`goad.sh` & `goad.py**` *(Ngoài thư mục gốc)* | ~650 dòng (Python/Bash). Trình điều khiển dòng lệnh đọc tham số `-t GOAD-Light -p aws -m local`, kiểm tra phụ thuộc, gọi Terraform tạo VM và kích hoạt `ansible-playbook`. | **Thay thế bằng PowerShell & AWS Console** | Tôi không sử dụng wrapper `goad.py` để tránh phải khởi tạo thêm máy ảo trung gian (Jumpbox Ubuntu) trên AWS. Thay vào đó, tôi khởi tạo trực tiếp 3 máy ảo EC2 (`DC01`, `SRV02`, `WS01`) và thực thi kịch bản cấu hình bằng PowerShell gốc.
 
  |
-| **`ad/GOAD-Light/README.md`** | ~95 dòng. Мо tả sơ đồ mạng 3 máy ảo gốc (`dc01`: `.10`, `dc02`: `.11`, `srv02`: `.22`), danh sách người dùng và kịch bản tấn công mẫu. | **Tham khảo & Tái cấu trúc Topology** | Tôi giữ nguyên quy mô **3 máy ảo (3-node topology)** của `GOAD-Light`, nhưng chuyển đổi vai trò từ `[2 DCs + 1 Server]` sang **`[1 DC (DC01) + 1 HIS Server (SRV02) + 1 Workstation (WS01)]`** để đại diện chính xác cho kiến trúc mạng phòng khám.
+| **`ad/GOAD-Light/README.md`** | ~95 dòng.Mô tả sơ đồ mạng 3 máy ảo gốc (`dc01`: `.10`, `dc02`: `.11`, `srv02`: `.22`), danh sách người dùng và kịch bản tấn công mẫu. | **Tham khảo & Tái cấu trúc Topology** | Tôi giữ nguyên quy mô **3 máy ảo (3-node topology)** của `GOAD-Light`, nhưng chuyển đổi vai trò từ `[2 DCs + 1 Server]` sang **`[1 DC (DC01) + 1 HIS Server (SRV02) + 1 Workstation (WS01)]`** để đại diện chính xác cho kiến trúc mạng phòng khám.
 
  |
 | **`ad/GOAD-Light/data/inventory`** | ~138 dòng (INI format). Định nghĩa danh sách máy chủ, nhóm vai trò Ansible và biến môi trường mạng. *(Xem giải trình từng dòng ở Mục 1.2)*. | **Chỉnh sửa & Ánh xạ sang 3 VMs** | Tôi giữ lại các nhóm vai trò `[dc]`, `[server]`, `[mssql]` và bổ sung nút `[workstation]` (`WS01`), đồng thời loại bỏ `[child_dc]`, `[adcs]`, `[iis]`, `[trust]`, `[laps]`.
@@ -1877,7 +1877,7 @@ ansible-playbook -i inventory provisioning_clinic.yml
 
 Dưới đây là toàn bộ nội dung mã nguồn hoàn chỉnh cho **10 tệp** đang để trống trong các thư mục `ad_identity_200_users/`, `his_mssql_database/`, `business_noise_generators/` và `telemetry_configs/` của kho mã nguồn `HUST-DATN-20261-AD-Clinic-Detection`.
 
-Toàn bộ các tệp này đã được đồng bộ hóa 100% về mặt đường dẫn, tên biến, tên miền **`clinic.local`**, cấu trúc **3 máy ảo (`DC01`, `SRV02`, `WS01`)** và tên tài khoản dịch vụ **`SVC_HIS_Database`** (kèm alias tương thích ngược cho `SVC_HIS_SQL` để không bao giờ bị lỗi thiếu tài khoản dù bạn chạy kịch bản nào). Cuối bài viết là danh mục **Tài liệu tham khảo chuẩn IEEE** được trích dẫn xuyên suốt trong mã nguồn.
+Toàn bộ các tệp này đã được đồng bộ hóa 100% về mặt đường dẫn, tên biến, tên miền **`clinic.local`**, cấu trúc **3 máy ảo (`DC01`, `SRV02`, `WS01`)** và tên tài khoản dịch vụ **`SVC_HIS_Database`** (kèm alias tương thích ngược cho `SVC_HIS_Database` để không bao giờ bị lỗi thiếu tài khoản dù bạn chạy kịch bản nào). Cuối bài viết là danh mục **Tài liệu tham khảo chuẩn IEEE** được trích dẫn xuyên suốt trong mã nguồn.
 
 ---
 
@@ -1906,7 +1906,7 @@ LT_LeTan001,LeTan001,Hoang,Le tan Hoang Minh Giang (001),Nhan vien Tiep don,Phon
 
 ## 2. Tệp `01_clinic_lab_and_noise/ad_identity_200_users/Import-ClinicADUsers.ps1`
 
-Kịch bản này tự động kiểm tra/sinh đầy đủ 200 dòng trong tệp `clinic_200_staff_identities.csv`, khởi tạo 6 OUs, 5 Security Groups, 200 định danh nhân sự và thiết lập thuộc tính mã hóa Kerberos (`msDS-SupportedEncryptionTypes = 28` hỗ trợ cả `RC4 0x17` và `AES256 0x12`) cho **`SVC_HIS_Database`** [1], [2]:
+Kịch bản này tự động kiểm tra/sinh đầy đủ 200 dòng trong tệp `clinic_200_staff_identities.csv`, khởi tạo 6 OUs, 5 Security Groups, 200 định danh nhân sự và thiết lập thuộc tính mã hóa Kerberos (`msDS-SupportedEncryptionTypes = 28` hỗ trợ cả `RC4 0x17` và `AES256 0x12`) cho **`SVC_HIS_Database`** , :
 
 ```powershell
 <#
@@ -1916,7 +1916,7 @@ Kịch bản này tự động kiểm tra/sinh đầy đủ 200 dòng trong tệ
     nhân sự y tế + tài khoản dịch vụ SVC_HIS_Database, SVC_HIS_Sync vào miền clinic.local.
 .NOTES
     Đồ án Tốt nghiệp Kỳ 2026.1 - Sinh viên: Vũ Thúy Hường (MSSV: 20225135)
-    Tham khảo kỹ thuật: Microsoft ActiveDirectory Module & Kerberos Encryption Types [1], [2].
+    Tham khảo kỹ thuật: Microsoft ActiveDirectory Module & Kerberos Encryption Types , .
 #>
 
 $ErrorActionPreference = "Stop"
@@ -2169,7 +2169,7 @@ Write-Host "[+] Hoàn tất làm sạch các đối tượng mặc định của
 
 ## 4. Tệp `01_clinic_lab_and_noise/his_mssql_database/Setup_SMB_BenhAn_Share.ps1`
 
-Kịch bản này chạy trên máy chủ **`SRV02`**, khởi tạo thư mục `C:\HoSoBenhAn_XML`, mở SMB Share ẩn **`\\SRV02\BenhAn$`**, gắn SACL (System Access Control List) để sinh **Event ID 5140 và 5145**, đồng thời tạo sẵn 20 tệp hồ sơ bệnh án XML theo đúng chuẩn **Quyết định 130/QĐ-BYT** và **4750/QĐ-BYT** [3]:
+Kịch bản này chạy trên máy chủ **`SRV02`**, khởi tạo thư mục `C:\HoSoBenhAn_XML`, mở SMB Share ẩn **`\\SRV02\BenhAn$`**, gắn SACL (System Access Control List) để sinh **Event ID 5140 và 5145**, đồng thời tạo sẵn 20 tệp hồ sơ bệnh án XML theo đúng chuẩn **Quyết định 130/QĐ-BYT** và **4750/QĐ-BYT** :
 
 ```powershell
 <#
@@ -2177,7 +2177,7 @@ Kịch bản này chạy trên máy chủ **`SRV02`**, khởi tạo thư mục `
     Setup_SMB_BenhAn_Share.ps1
     Khởi tạo thư mục C:\HoSoBenhAn_XML, mở SMB Share ẩn \\SRV02\BenhAn$,
     cấu hình SACL Auditing (Event ID 5140/5145) và sinh 20 tệp XML BHYT mẫu
-    theo Quyết định 130/QĐ-BYT & 4750/QĐ-BYT [3].
+    theo Quyết định 130/QĐ-BYT & 4750/QĐ-BYT .
 .NOTES
     Chạy trên máy chủ bệnh án SRV02 (SRV02.clinic.local).
 #>
@@ -2265,14 +2265,14 @@ Write-Host "[+] Đã tạo 20 tệp XML BHYT mẫu và bật kiểm toán Event 
 
 ## 5. Tệp `01_clinic_lab_and_noise/his_mssql_database/Init_HIS_EMR_Schema.sql`
 
-Tệp SQL này khởi tạo cơ sở dữ liệu **`HIS_ClinicDB`**, tạo bảng **`HoSoBenhAn`** (đồng thời tạo một View đồng nghĩa tên `BenhAnDienTu` để mọi câu truy vấn dùng tên `HoSoBenhAn` hay `BenhAnDienTu` đều chạy thành công 100%), chèn 50 hồ sơ bệnh án điện tử đã ký số (`DaKySoTT13 = 1`) theo Thông tư 13/2025/TT-BYT [4], và cấp quyền `sysadmin` / `db_owner` cho **`CLINIC\SVC_HIS_Database`** và **`CLINIC\SVC_HIS_Sync`**:
+Tệp SQL này khởi tạo cơ sở dữ liệu **`HIS_ClinicDB`**, tạo bảng **`HoSoBenhAn`** (đồng thời tạo một View đồng nghĩa tên `BenhAnDienTu` để mọi câu truy vấn dùng tên `HoSoBenhAn` hay `BenhAnDienTu` đều chạy thành công 100%), chèn 50 hồ sơ bệnh án điện tử đã ký số (`DaKySoTT13 = 1`) theo Thông tư 13/2025/TT-BYT , và cấp quyền `sysadmin` / `db_owner` cho **`CLINIC\SVC_HIS_Database`** và **`CLINIC\SVC_HIS_Sync`**:
 
 ```sql
 /*
 ================================================================================
 Tệp: 01_clinic_lab_and_noise/his_mssql_database/Init_HIS_EMR_Schema.sql
 Mô tả: Khởi tạo CSDL HIS_ClinicDB, bảng dbo.HoSoBenhAn (50 bệnh án điện tử đã ký số
-       theo Thông tư 13/2025/TT-BYT [4] và Luật BVDLCN 91/2025/QH15 [5]),
+       theo Thông tư 13/2025/TT-BYT  và Luật BVDLCN 91/2025/QH15 ),
        và phân quyền cho tài khoản dịch vụ CLINIC\SVC_HIS_Database, CLINIC\SVC_HIS_Sync.
 ================================================================================
 */
@@ -2392,14 +2392,14 @@ GO
 
 ## 6. Tệp `01_clinic_lab_and_noise/his_mssql_database/Configure_SQL_Server_Audit_33205.sql`
 
-Tệp SQL này cấu hình **`SERVER AUDIT`** đẩy trực tiếp nhật ký kiểm toán vào **Windows Application Log** để sinh ra **Event ID 33205** mỗi khi có truy vấn `SELECT, INSERT, UPDATE, DELETE` vào bảng `HoSoBenhAn` hoặc khi kẻ tấn công chạy lệnh `ALTER SERVER AUDIT ... WITH (STATE = OFF)` nhằm tắt kiểm toán [6]:
+Tệp SQL này cấu hình **`SERVER AUDIT`** đẩy trực tiếp nhật ký kiểm toán vào **Windows Application Log** để sinh ra **Event ID 33205** mỗi khi có truy vấn `SELECT, INSERT, UPDATE, DELETE` vào bảng `HoSoBenhAn` hoặc khi kẻ tấn công chạy lệnh `ALTER SERVER AUDIT ... WITH (STATE = OFF)` nhằm tắt kiểm toán :
 
 ```sql
 /*
 ================================================================================
 Tệp: 01_clinic_lab_and_noise/his_mssql_database/Configure_SQL_Server_Audit_33205.sql
 Mô tả: Kích hoạt cơ chế ghi vết kiểm toán SQL Server Audit đẩy vào Windows Application
-       Event Log (Event ID 33205) phục vụ giám sát theo Thông tư 13/2025/TT-BYT [4], [6].
+       Event Log (Event ID 33205) phục vụ giám sát theo Thông tư 13/2025/TT-BYT , .
 ================================================================================
 */
 
@@ -2470,7 +2470,7 @@ GO
 
 ## 7. Tệp `01_clinic_lab_and_noise/business_noise_generators/Invoke-DoctorShiftChange_4624_4625.ps1`
 
-Kịch bản này chạy trên máy trạm **`WS01`**, mô phỏng hoạt động giao ca trực (7h sáng, 12h trưa, 17h chiều) của đội ngũ Bác sĩ, Y tá, Lễ tân trên máy trạm dùng chung. Đặc biệt, kịch bản sử dụng hàm Win32 API `Advapi32.dll::LogonUser` qua mạng / tại chỗ để sinh **Event ID 4624** (Đăng nhập hợp lệ) và chủ đích gài **tỷ lệ 5% gõ sai mật khẩu** để sinh **Event ID 4625** (Đăng nhập thất bại hợp lệ do nhân viên y tế gõ nhầm phím lúc vội đổi ca) [7]:
+Kịch bản này chạy trên máy trạm **`WS01`**, mô phỏng hoạt động giao ca trực (7h sáng, 12h trưa, 17h chiều) của đội ngũ Bác sĩ, Y tá, Lễ tân trên máy trạm dùng chung. Đặc biệt, kịch bản sử dụng hàm Win32 API `Advapi32.dll::LogonUser` qua mạng / tại chỗ để sinh **Event ID 4624** (Đăng nhập hợp lệ) và chủ đích gài **tỷ lệ 5% gõ sai mật khẩu** để sinh **Event ID 4625** (Đăng nhập thất bại hợp lệ do nhân viên y tế gõ nhầm phím lúc vội đổi ca) :
 
 ```powershell
 <#
@@ -2481,7 +2481,7 @@ Kịch bản này chạy trên máy trạm **`WS01`**, mô phỏng hoạt độn
     Sinh sự kiện Windows Security Event ID 4624 (Success) và 4625 (Failure) trên DC01 & WS01.
 .NOTES
     Đồ án Tốt nghiệp Kỳ 2026.1 - Sinh viên: Vũ Thúy Hường (MSSV: 20225135)
-    Phương pháp luận: Synthetic Benign Activity Generation [7], [8].
+    Phương pháp luận: Synthetic Benign Activity Generation , .
 #>
 
 param(
@@ -2565,7 +2565,7 @@ Write-Host "[+] Hoàn tất mô phỏng lưu lượng giao ca trực (Event ID 4
 
 ## 8. Tệp `01_clinic_lab_and_noise/business_noise_generators/Invoke-HISXmlSync_QD130_QD4750.ps1`
 
-Kịch bản này chạy trên **`WS01`** (hoặc `SRV02`), mô phỏng dịch vụ nền của phần mềm quản lý bệnh viện (HIS) sử dụng tài khoản **`SVC_HIS_Sync`** và **`SVC_HIS_Database`** định kỳ truy vấn LDAP nhẹ nhàng, đọc lẻ từng bản ghi trong bảng `HoSoBenhAn` trên SQL Server và đồng bộ tệp XML BHYT theo Quyết định 130/QĐ-BYT & 4750/QĐ-BYT qua SMB Share **`\\SRV02\BenhAn$`** [3].
+Kịch bản này chạy trên **`WS01`** (hoặc `SRV02`), mô phỏng dịch vụ nền của phần mềm quản lý bệnh viện (HIS) sử dụng tài khoản **`SVC_HIS_Sync`** và **`SVC_HIS_Database`** định kỳ truy vấn LDAP nhẹ nhàng, đọc lẻ từng bản ghi trong bảng `HoSoBenhAn` trên SQL Server và đồng bộ tệp XML BHYT theo Quyết định 130/QĐ-BYT & 4750/QĐ-BYT qua SMB Share **`\\SRV02\BenhAn$`** .
 Chính luồng hoạt động hợp lệ này sẽ bị Luật V2 (Nới lỏng quá mức) bắt nhầm thành hàng nghìn cảnh báo giả (False Positives), làm cơ sở thực tiễn để Luật V3 (Threshold) và Luật V4 (Contextual Whitelist) lọc bỏ:
 
 ```powershell
@@ -2600,13 +2600,13 @@ for ($cycle = 1; $cycle -le $SyncCycles; $cycle++) {
     $Searcher = [adsisearcher]"(&(objectCategory=person)(objectClass=user)(department=Khoa Kham Benh))"
     $Searcher.PageSize = 5
     $null = $Searcher.FindOne()
-    Write-Host "  [1] Đã thực hiện 1 truy vấn LDAP hợp lệ kiểm tra danh mục Khoa Khám Bệnh (Event 1644)." -ForegroundColor Gray
+    Write-Host "   Đã thực hiện 1 truy vấn LDAP hợp lệ kiểm tra danh mục Khoa Khám Bệnh (Event 1644)." -ForegroundColor Gray
 
     # 2. Bác sĩ / Phần mềm HIS tra cứu lẻ 1 hồ sơ bệnh án cụ thể trên SQL Server (Sinh Event ID 33205 hợp lệ)
     $RandomID = "BA2026_{0:D4}" -f (Get-Random -Minimum 1 -Maximum 50)
     $SingleQuery = "SET NOCOUNT ON; SELECT MaBenhAn, HoTen, ChanDoanICD10, DaKySoTT13 FROM HIS_ClinicDB.dbo.HoSoBenhAn WHERE MaBenhAn = '$RandomID';"
     sqlcmd -S $TargetServer -U $SyncUser -P $SyncPass -Q $SingleQuery 2>$null | Out-Null
-    Write-Host "  [2] Tra cứu lẻ 01 hồ sơ bệnh án ($RandomID) trên $TargetServer (Event 33205)." -ForegroundColor Green
+    Write-Host "   Tra cứu lẻ 01 hồ sơ bệnh án ($RandomID) trên $TargetServer (Event 33205)." -ForegroundColor Green
 
     # 3. Đồng bộ tệp XML BHYT theo Quyết định 130/QĐ-BYT qua SMB Share \\SRV02\BenhAn$ (Sinh Event 5140/5145)
     net use $SharePath $SyncPass /user:"$DomainName\$SyncUser" 2>$null | Out-Null
@@ -2617,7 +2617,7 @@ for ($cycle = 1; $cycle -le $SyncCycles; $cycle++) {
         }
         $SyncLogFile = Join-Path $SharePath ("HIS_Sync_Heartbeat_{0:D2}.xml" -f ($cycle % 5))
         "<SYNC_STATUS><TIME>$(Get-Date -Format 'o')</TIME><ACCOUNT>$SyncUser</ACCOUNT><STANDARD>QD130_QD4750_BYT</STANDARD></SYNC_STATUS>" | Set-Content -Path $SyncLogFile -Encoding UTF8
-        Write-Host "  [3] Đồng bộ thành công tệp XML BHYT qua SMB Share $SharePath (Event 5140/5145)." -ForegroundColor Green
+        Write-Host "   Đồng bộ thành công tệp XML BHYT qua SMB Share $SharePath (Event 5140/5145)." -ForegroundColor Green
     }
     net use $SharePath /delete /y 2>$null | Out-Null
 
@@ -2683,7 +2683,7 @@ Write-Host "[+] Đã đăng ký thành công 2 Scheduled Tasks chạy ngầm đ�
 
 ## 10. Tệp `02_telemetry_and_scenarios/telemetry_configs/Enable-LDAP-1644-Diagnostics.reg`
 
-Tệp `.reg` này được gọi trực tiếp bởi cả `02_DC01_Stage2_ConfigureAD_Audit.ps1` và `provisioning_clinic.yml`. Nó bật khóa `15 Field Engineering = 5` và hạ ngưỡng `Expensive/Inefficient Search Results Threshold = 1` để ép Domain Controller `DC01` ghi nhận **mọi** truy vấn LDAP/ADSI thành **Event ID 1644** trong sổ `Directory Service` [9], [10]:
+Tệp `.reg` này được gọi trực tiếp bởi cả `02_DC01_Stage2_ConfigureAD_Audit.ps1` và `provisioning_clinic.yml`. Nó bật khóa `15 Field Engineering = 5` và hạ ngưỡng `Expensive/Inefficient Search Results Threshold = 1` để ép Domain Controller `DC01` ghi nhận **mọi** truy vấn LDAP/ADSI thành **Event ID 1644** trong sổ `Directory Service` , :
 
 ```reg
 Windows Registry Editor Version 5.00
@@ -2692,7 +2692,7 @@ Windows Registry Editor Version 5.00
 ; ĐỒ ÁN TỐT NGHIỆP KỲ 2026.1 - ĐẠI HỌC BÁCH KHOA HÀ NỘI (HUST)
 ; Sinh viên thực hiện: Vũ Thúy Hường - MSSV: 20225135
 ; Mô tả: Kích hoạt ghi vết chi tiết truy vấn LDAP Active Directory (Event ID 1644)
-;        và hạ ngưỡng tìm kiếm xuống 1 để bắt kỹ thuật dò quét chậm qua ADSI [9], [10].
+;        và hạ ngưỡng tìm kiếm xuống 1 để bắt kỹ thuật dò quét chậm qua ADSI , .
 ; ==============================================================================
 
 [HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\NTDS\Diagnostics]
@@ -2711,24 +2711,24 @@ Windows Registry Editor Version 5.00
 
 # PHẦN 5: LƯU VẾT TÀI LIỆU THAM KHẢO CHUẨN IEEE (DÙNG CHO BÁO CÁO ĐATN)
 
-Dưới đây là danh sách các tài liệu tham khảo chuẩn **IEEE** tương ứng với các đánh số `[1]` $\rightarrow$ `[10]` được sử dụng để xây dựng các tệp kịch bản ở trên, giúp bạn chèn trực tiếp vào phần **Tài liệu tham khảo (References)** của quyển báo cáo:
+Dưới đây là danh sách các tài liệu tham khảo chuẩn **IEEE** tương ứng với các đánh số `` $\rightarrow$ `` được sử dụng để xây dựng các tệp kịch bản ở trên, giúp bạn chèn trực tiếp vào phần **Tài liệu tham khảo (References)** của quyển báo cáo:
 
-* **[1]** Microsoft Corporation, "New-ADUser & Set-ADUser (ActiveDirectory PowerShell Module)," *Microsoft Learn*, 2024. [Online]. Available: [https://learn.microsoft.com/en-us/powershell/module/activedirectory/set-aduser](https://learn.microsoft.com/en-us/powershell/module/activedirectory/set-aduser). [Accessed: Nov. 13, 2026].
-* **[2]** W. Schroeder (@harmj0y), "Roasting AS-REPs and Kerberoasting OpSec (Encryption Downgrade 0x17 vs. AES 0x12)," *SpecterOps Technical Blog & GhostPack Rubeus Documentation*, 2023. [Online]. Available: [https://github.com/GhostPack/Rubeus](https://github.com/GhostPack/Rubeus). [Accessed: Nov. 13, 2026].
-* **[3]** Bộ Y tế, *Quyết định số 130/QĐ-BYT ngày 18/01/2023 và Quyết định số 4750/QĐ-BYT ngày 29/12/2023 quy định chuẩn và định dạng dữ liệu đầu ra (XML) phục vụ việc quản lý, giám định, thanh toán chi phí khám bệnh, chữa bệnh BHYT*, Hà Nội, Việt Nam, 2023.
-
-
-* **[4]** Bộ Y tế, *Thông tư số 13/2025/TT-BYT ngày 06/06/2025 hướng dẫn triển khai hồ sơ bệnh án điện tử (Lộ trình hoàn thành trước ngày 31/12/2026)*, Hà Nội, Việt Nam, 2025.
+* **** Microsoft Corporation, "New-ADUser & Set-ADUser (ActiveDirectory PowerShell Module)," *Microsoft Learn*, 2024. [Online]. Available: [https://learn.microsoft.com/en-us/powershell/module/activedirectory/set-aduser](https://learn.microsoft.com/en-us/powershell/module/activedirectory/set-aduser). [Accessed: Nov. 13, 2026].
+* **** W. Schroeder (@harmj0y), "Roasting AS-REPs and Kerberoasting OpSec (Encryption Downgrade 0x17 vs. AES 0x12)," *SpecterOps Technical Blog & GhostPack Rubeus Documentation*, 2023. [Online]. Available: [https://github.com/GhostPack/Rubeus](https://github.com/GhostPack/Rubeus). [Accessed: Nov. 13, 2026].
+* **** Bộ Y tế, *Quyết định số 130/QĐ-BYT ngày 18/01/2023 và Quyết định số 4750/QĐ-BYT ngày 29/12/2023 quy định chuẩn và định dạng dữ liệu đầu ra (XML) phục vụ việc quản lý, giám định, thanh toán chi phí khám bệnh, chữa bệnh BHYT*, Hà Nội, Việt Nam, 2023.
 
 
-* **[5]** Quốc hội & Chính phủ Việt Nam, *Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 (ngày 26/06/2025) và Nghị định số 356/2025/NĐ-CP (ngày 31/12/2025) quy định chi tiết một số điều và biện pháp thi hành Luật Bảo vệ dữ liệu cá nhân*, Hà Nội, Việt Nam, 2025.
+* **** Bộ Y tế, *Thông tư số 13/2025/TT-BYT ngày 06/06/2025 hướng dẫn triển khai hồ sơ bệnh án điện tử (Lộ trình hoàn thành trước ngày 31/12/2026)*, Hà Nội, Việt Nam, 2025.
 
 
-* **[6]** Microsoft Corporation, "SQL Server Audit (Database Engine) & Event ID 33205 in Windows Application Log," *Microsoft Learn - Relational Databases Security*, 2024. [Online]. Available: [https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-records](https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-records). [Accessed: Nov. 13, 2026].
-* **[7]** A. Ferriyan *et al.*, "Generating Network Intrusion Detection Dataset Based on Real and Encrypted Synthetic Attack Traffic (HIKARI-2021)," *Applied Sciences*, vol. 11, no. 17, p. 7868, 2021.
-* **[8]** L. Berg, "ActivitySimulator: Generating realistic Active Directory and SMB file activity for SOC/SIEM evaluation," *GitHub Repository*, 2023. [Online]. Available: [https://github.com/leeberg/ActivitySimulator](https://github.com/leeberg/ActivitySimulator). [Accessed: Nov. 13, 2026].
-* **[9]** Microsoft Corporation, "How to configure Active Directory diagnostic event logging (15 Field Engineering)," *Microsoft Learn - Windows Server Troubleshooting*, 2024. [Online]. Available: [https://learn.microsoft.com/en-us/troubleshoot/windows-server/active-directory/configure-ad-diagnostic-event-logging](https://learn.microsoft.com/en-us/troubleshoot/windows-server/active-directory/configure-ad-diagnostic-event-logging). [Accessed: Nov. 13, 2026].
-* **[10]** M. Reynolds, "How to find expensive, inefficient and long running LDAP queries in Active Directory (Event ID 1644)," *Microsoft Tech Community - Core Infrastructure and Security Blog*, 2019. [Online]. Available: [https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/how-to-find-expensive-inefficient-and-long-running-ldap-queries/ba-p/257859](https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/how-to-find-expensive-inefficient-and-long-running-ldap-queries/ba-p/257859). [Accessed: Nov. 13, 2026].
+* **** Quốc hội & Chính phủ Việt Nam, *Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 (ngày 26/06/2025) và Nghị định số 356/2025/NĐ-CP (ngày 31/12/2025) quy định chi tiết một số điều và biện pháp thi hành Luật Bảo vệ dữ liệu cá nhân*, Hà Nội, Việt Nam, 2025.
+
+
+* **** Microsoft Corporation, "SQL Server Audit (Database Engine) & Event ID 33205 in Windows Application Log," *Microsoft Learn - Relational Databases Security*, 2024. [Online]. Available: [https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-records](https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-records). [Accessed: Nov. 13, 2026].
+* **** A. Ferriyan *et al.*, "Generating Network Intrusion Detection Dataset Based on Real and Encrypted Synthetic Attack Traffic (HIKARI-2021)," *Applied Sciences*, vol. 11, no. 17, p. 7868, 2021.
+* **** L. Berg, "ActivitySimulator: Generating realistic Active Directory and SMB file activity for SOC/SIEM evaluation," *GitHub Repository*, 2023. [Online]. Available: [https://github.com/leeberg/ActivitySimulator](https://github.com/leeberg/ActivitySimulator). [Accessed: Nov. 13, 2026].
+* **** Microsoft Corporation, "How to configure Active Directory diagnostic event logging (15 Field Engineering)," *Microsoft Learn - Windows Server Troubleshooting*, 2024. [Online]. Available: [https://learn.microsoft.com/en-us/troubleshoot/windows-server/active-directory/configure-ad-diagnostic-event-logging](https://learn.microsoft.com/en-us/troubleshoot/windows-server/active-directory/configure-ad-diagnostic-event-logging). [Accessed: Nov. 13, 2026].
+* **** M. Reynolds, "How to find expensive, inefficient and long running LDAP queries in Active Directory (Event ID 1644)," *Microsoft Tech Community - Core Infrastructure and Security Blog*, 2019. [Online]. Available: [https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/how-to-find-expensive-inefficient-and-long-running-ldap-queries/ba-p/257859](https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/how-to-find-expensive-inefficient-and-long-running-ldap-queries/ba-p/257859). [Accessed: Nov. 13, 2026].
 
 ---
 

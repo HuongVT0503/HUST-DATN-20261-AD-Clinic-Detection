@@ -2,7 +2,7 @@
 ================================================================================
 Tệp: 01_clinic_lab_and_noise/his_mssql_database/Init_HIS_EMR_Schema.sql
 Mô tả: Khởi tạo CSDL HIS_ClinicDB, bảng dbo.HoSoBenhAn (50 bệnh án điện tử đã ký số
-       theo Thông tư 13/2025/TT-BYT [4] và Luật BVDLCN 91/2025/QH15 [5]),
+       theo Thông tư 13/2025/TT-BYT  và Luật BVDLCN 91/2025/QH15 ),
        và phân quyền cho tài khoản dịch vụ CLINIC\SVC_HIS_Database, CLINIC\SVC_HIS_Sync.
 ================================================================================
 */

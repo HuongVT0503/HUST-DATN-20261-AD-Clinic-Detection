@@ -6,7 +6,7 @@
     Sinh sự kiện Windows Security Event ID 4624 (Success) và 4625 (Failure) trên DC01 & WS01.
 .NOTES
     Đồ án Tốt nghiệp Kỳ 2026.1 - Sinh viên: Vũ Thúy Hường (MSSV: 20225135)
-    Phương pháp luận: Synthetic Benign Activity Generation [7], [8].
+    Phương pháp luận: Synthetic Benign Activity Generation , .
 #>
 
 param(

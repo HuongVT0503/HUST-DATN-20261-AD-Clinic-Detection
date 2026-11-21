@@ -144,7 +144,7 @@ Dưới đây là **toàn bộ nội dung của ~450 dòng cấu hình này**, �
 * **Giải trình chi tiết từng thành phần:**
 * Role `"dc"` của `dc01` + Role `"server"` / `"mssql"` của `srv02` $\rightarrow$ **GIỮ LẠI & GỘP CHUNG:** Tích hợp cả 3 vai trò này vào chung con EC2 của đồ án (`CLINIC-DC01-SRV02`).
 * `srv02.shares` (`"all"`, `"public"`) $\rightarrow$ **GIỮ CƠ CHẾ & SỬA:** Em giữ lại việc tạo SMB Share bằng PowerShell (`New-SmbShare` với `"FullAccess": "Everyone"`), nhưng đổi đường dẫn thành `C:\HoSoBenhAn_XML` (Share name `BenhAn$`) để đóng vai trò làm thư mục lưu trữ file XML Bảo hiểm y tế (theo Quyết định 130/QĐ-BYT).
-* `srv02.mssql` (`instance: MSSQLSERVER`, `port: 1433`, `impersonate_users`, `execute_as_user`, `xp_cmdshell_allowed`) $\rightarrow$ **GIỮ CƠ CHẾ & SỬA:** Giữ nguyên port 1433, giữ logic leo thang đặc quyền qua AD login, và quan trọng nhất là giữ tùy chọn `xp_cmdshell` (để trigger **Event ID 15457**). Em map quyền của `arya.stark`/`samwell.tarly` sang tài khoản `CLINIC\SVC_HIS_SQL`, thêm database `HIS_ClinicDB` và cấu hình `SERVER AUDIT TO APPLICATION_LOG` (để lấy log **Event ID 33205**).
+* `srv02.mssql` (`instance: MSSQLSERVER`, `port: 1433`, `impersonate_users`, `execute_as_user`, `xp_cmdshell_allowed`) $\rightarrow$ **GIỮ CƠ CHẾ & SỬA:** Giữ nguyên port 1433, giữ logic leo thang đặc quyền qua AD login, và quan trọng nhất là giữ tùy chọn `xp_cmdshell` (để trigger **Event ID 15457**). Em map quyền của `arya.stark`/`samwell.tarly` sang tài khoản `CLINIC\SVC_HIS_Database`, thêm database `HIS_ClinicDB` và cấu hình `SERVER AUDIT TO APPLICATION_LOG` (để lấy log **Event ID 33205**).
 * Khai báo lỗi thời: `dc01.adcs_templates` (`ESC1`..`ESC8`), máy `dc02` (`winterfell`, `unconstrained_delegation`, `PetitPotam`), `srv02.iis` (`asp_upload_vuln`), `srv02.constrained_delegation`, và tính năng `laps` $\rightarrow$ **LƯỢC BỎ:** Các lỗ hổng này không khớp với 3 kịch bản tấn công ADSI/LDAP (Event 1644), Kerberoasting (Event 4769 mã hóa `0x17` vs `0x12`), và MS SQL Server (Event 15457/33205) mà đồ án focus nên em dọn sạch để đỡ sinh noise không cần thiết.
 
 
@@ -234,7 +234,7 @@ Dưới đây là **toàn bộ nội dung của ~450 dòng cấu hình này**, �
 
 * **Giải trình chi tiết từng thành phần:**
 * `robert.baratheon` (`Domain Admins`) $\rightarrow$ **CHỈNH SỬA:** Được map sang `IT_Admin01` và `IT_Admin02` nằm trong `OU=IT_Admin` (đóng vai trò là các admin hợp lệ để đồ án có baseline whitelist khi viết Sigma Rule V4).
-* `varys` & `pycelle` (Sở hữu attribute `"spn"`) $\rightarrow$ **GIỮ CƠ CHẾ, GỘP VÀO `SVC_HIS_SQL`:** Logic gán SPN được em tái sử dụng nhưng chuyển mục tiêu sang hệ thống database bệnh án với SPN `MSSQLSvc/SRV02.clinic.local:1433`.
+* `varys` & `pycelle` (Sở hữu attribute `"spn"`) $\rightarrow$ **GIỮ CƠ CHẾ, GỘP VÀO `SVC_HIS_Database`:** Logic gán SPN được em tái sử dụng nhưng chuyển mục tiêu sang hệ thống database bệnh án với SPN `MSSQLSvc/SRV02.clinic.local:1433`.
 * `tywin.lannister` (Lộ mật khẩu clear-text trong field `description`) $\rightarrow$ **GIỮ NGUYÊN CƠ CHẾ:** Áp dụng y hệt thủ thuật này vào mô tả tài khoản `SVC_HIS_Sync`, giúp kịch bản dò quét AD (Scenario 1) bằng ADSI tìm ra được metadata nhạy cảm thực tế trong ngữ cảnh vận hành phòng khám.
 * 9 nhân vật còn lại (`cersei`, `jaime`, `joffrey`, `petyr`...) $\rightarrow$ **SỬA & NHÂN BẢN:** Từ bộ khung user này, em viết script tự động gen ra **195 tài khoản nhân sự phòng khám** (`BS_BacSi001..060`, `YT_YTa001..100`, `LT_LeTan001..035`) để đáp ứng đủ số lượng 200 account giả lập nhiễu log (noise generation) mà đồ án yêu cầu.
 
@@ -283,9 +283,9 @@ Dưới đây là **toàn bộ nội dung của ~450 dòng cấu hình này**, �
 ```
 
 * **Giải trình chi tiết từng thành phần:**
-* `jon.snow` (`"spn": ["MSSQLSvc/castelblack...1433"]`, mật khẩu yếu `"iknownothing"`) $\rightarrow$ **GIỮ 100% CƠ CHẾ, ĐỔI TÊN:** Đổi tên thành **`SVC_HIS_SQL`** (mang SPN `MSSQLSvc/SRV02.clinic.local:1433`, password `Password123!`). Đồng thời em gắn thêm tham số `-KerberosEncryptionType RC4,AES128,AES256` để phục vụ riêng cho Kịch bản tấn công số 2 (Test downgrade mã hóa Kerberos `0x17` bypass OpSec chuẩn `0x12`).
+* `jon.snow` (`"spn": ["MSSQLSvc/castelblack...1433"]`, mật khẩu yếu `"iknownothing"`) $\rightarrow$ **GIỮ 100% CƠ CHẾ, ĐỔI TÊN:** Đổi tên thành **`SVC_HIS_Database`** (mang SPN `MSSQLSvc/SRV02.clinic.local:1433`, password `Password123!`). Đồng thời em gắn thêm tham số `-KerberosEncryptionType RC4,AES128,AES256` để phục vụ riêng cho Kịch bản tấn công số 2 (Test downgrade mã hóa Kerberos `0x17` bypass OpSec chuẩn `0x12`).
 * `brandon.stark` (Thuộc tính `"dont_req_preauth": true`) $\rightarrow$ **GIỮ 100% CƠ CHẾ, ĐỔI TÊN:** Đổi thành account **`SVC_Backup_Legacy`** và dùng PowerShell cấp quyền qua cờ `Set-ADAccountControl -DoesNotRequirePreAuth $true` phục vụ test AS-REP Roasting.
-* `arya.stark` & `samwell.tarly` (Các user có quyền đăng nhập MSSQL trên `srv02`) $\rightarrow$ **GIỮ CƠ CHẾ, GỘP QUYỀN:** Chuyển các quyền này vào `SVC_HIS_SQL` và `SVC_HIS_Sync` để test Kịch bản số 3 (Truy vấn lén `SELECT/DELETE` database bệnh án, chạy `xp_cmdshell` Event 15457, và hành vi cố tình tắt SQL Audit sinh Event 33205).
+* `arya.stark` & `samwell.tarly` (Các user có quyền đăng nhập MSSQL trên `srv02`) $\rightarrow$ **GIỮ CƠ CHẾ, GỘP QUYỀN:** Chuyển các quyền này vào `SVC_HIS_Database` và `SVC_HIS_Sync` để test Kịch bản số 3 (Truy vấn lén `SELECT/DELETE` database bệnh án, chạy `xp_cmdshell` Event 15457, và hành vi cố tình tắt SQL Audit sinh Event 33205).
 * 7 user Stark/Wall còn lại $\rightarrow$ **CHỈNH SỬA:** Được em hòa chung vào tập script tự động gen 200 tài khoản bác sĩ/y tá của hệ thống phòng khám.
 
 
@@ -329,7 +329,7 @@ Dưới đây là **toàn bộ nội dung của ~450 dòng cấu hình này**, �
 
 * **Giải trình chi tiết từng thành phần:**
 * `"acls"` (Các đường link BloodHound DACL phức tạp như `GenericAll`, `ForceChangePassword`, `WriteDacl`...) $\rightarrow$ **LƯỢC BỎ:** Thay đổi và lạm dụng object DACL thuộc về mảng giải đố leo quyền CTF (dựng graph BloodHound). Đồ án của em focus vào việc phát hiện truy xuất **discovery** (ADSI/LDAP sinh Event ID 1644) chứ không phải hành vi thay đổi **modification** DACL (sinh Event ID 5136), nên lược bỏ mảng này để đỡ nặng hệ thống.
-* `"local_groups"` (`srv02.Administrators`, `Remote Desktop Users`) $\rightarrow$ **GIỮ CƠ CHẾ & SỬA:** Cấp quyền đăng nhập nội bộ cho các tài khoản `SVC_HIS_SQL`, `GRP_BacSi` và `GRP_YTa`. Nhờ đó tool sinh log tự động có thể tạo ra các traffic đăng nhập thật (phiên đổi ca trực Event ID 4624/4625) một cách trơn tru.
+* `"local_groups"` (`srv02.Administrators`, `Remote Desktop Users`) $\rightarrow$ **GIỮ CƠ CHẾ & SỬA:** Cấp quyền đăng nhập nội bộ cho các tài khoản `SVC_HIS_Database`, `GRP_BacSi` và `GRP_YTa`. Nhờ đó tool sinh log tự động có thể tạo ra các traffic đăng nhập thật (phiên đổi ca trực Event ID 4624/4625) một cách trơn tru.
 * `"gpos"` (`disable_defender`, `enable_rdp`, `laps_gpo`):
 * `enable_rdp` $\rightarrow$ **GIỮ LẠI:** Được em cấu hình trên EC2 AWS luôn để có thể kết nối `mstsc.exe` qua port 3389 vào hệ thống.
 * `disable_defender` $\rightarrow$ **CHỈNH SỬA:** Thay vì tắt hẳn Windows Defender qua GPO, em dùng lệnh PowerShell `Add-MpPreference -ExclusionPath "C:\Tools"` để exclude mỗi thư mục chứa đồ nghề. Việc này giúp Defender trên OS vẫn hoạt động ổn định nhưng không chém nhầm mất file `Rubeus.exe` hay script ADSI của em.

@@ -5,7 +5,7 @@
     nhân sự y tế + tài khoản dịch vụ SVC_HIS_Database, SVC_HIS_Sync vào miền clinic.local.
 .NOTES
     Đồ án Tốt nghiệp Kỳ 2026.1 - Sinh viên: Vũ Thúy Hường (MSSV: 20225135)
-    Tham khảo kỹ thuật: Microsoft ActiveDirectory Module & Kerberos Encryption Types [1], [2].
+    Tham khảo kỹ thuật: Microsoft ActiveDirectory Module & Kerberos Encryption Types , .
 #>
 
 $ErrorActionPreference = "Stop"

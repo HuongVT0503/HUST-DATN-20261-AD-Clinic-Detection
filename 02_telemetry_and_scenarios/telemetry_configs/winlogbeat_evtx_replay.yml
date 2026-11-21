@@ -17,7 +17,7 @@ output.elasticsearch:
   index: "winlogbeat-clinic-replay-%{+yyyy.MM.dd}"
 
 processors:
-  - add_R_metadata: ~
+  - add_host_metadata: ~
   - add_fields:
       target: clinic_lab
       fields:

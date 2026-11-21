@@ -36,7 +36,7 @@ Trong quy trình vận hành thực tế tại phòng khám, mỗi hồ sơ bệ
 
 ## 3. Ánh xạ từ Nghiệp vụ Y tế sang Lưu lượng Hệ thống (Telemetry & Business Noise)
 
-Để quá trình trích chuyển XML diễn ra tự động và liên tục trong giờ hành chính mà không làm gián đoạn công việc của bác sĩ, kiến trúc CNTT tại các phòng khám vừa và nhỏ thường sử dụng một **Tài khoản Dịch vụ (Service Account)** chạy ngầm (trong đồ án định danh là `SVC_HIS_Sync` hoặc `SVC_HIS_SQL`).
+Để quá trình trích chuyển XML diễn ra tự động và liên tục trong giờ hành chính mà không làm gián đoạn công việc của bác sĩ, kiến trúc CNTT tại các phòng khám vừa và nhỏ thường sử dụng một **Tài khoản Dịch vụ (Service Account)** chạy ngầm (trong đồ án định danh là `SVC_HIS_Sync` hoặc `SVC_HIS_Database`).
 
 Hoạt động hợp lệ này là **nguồn sinh nhiễu nền (Benign Background Traffic)** lớn nhất trong hệ thống mạng Active Directory và CSDL của phòng khám, trực tiếp gây ra hiện tượng **Quá tải cảnh báo giả (Alert Fatigue)** theo Nghịch lý Tỷ lệ Cơ sở (*Base-Rate Fallacy* - Axelsson, 1999) nếu luật SIEM không được tinh chỉnh:
 
@@ -72,6 +72,6 @@ Script mô phỏng lưu lượng nền trong đồ án tái hiện chính xác c
 ## 5. Trích dẫn Chuẩn IEEE
 
 ```text
-[1] Bộ Y tế, Quyết định quy định chuẩn và định dạng dữ liệu đầu ra phục vụ việc quản lý, giám định, thanh toán chi phí khám bệnh, chữa bệnh và giải quyết các chế độ liên quan, Quyết định số 130/QĐ-BYT, Hà Nội, Việt Nam, ban hành ngày 18/01/2023.
-[2] Bộ Y tế, Quyết định sửa đổi, bổ sung một số điều của Quyết định số 130/QĐ-BYT ngày 18 tháng 01 năm 2023 của Bộ trưởng Bộ Y tế quy định chuẩn và định dạng dữ liệu đầu ra phục vụ việc quản lý, giám định, thanh toán chi phí khám bệnh, chữa bệnh và giải quyết các chế độ liên quan, Quyết định số 4750/QĐ-BYT, Hà Nội, Việt Nam, ban hành ngày 29/12/2023.
-[3] Bộ Y tế, Thông tư quy định trích chuyển dữ liệu điện tử trong quản lý và thanh toán chi phí khám bệnh, chữa bệnh bảo hiểm y tế, Thông tư số 48/2017/TT-BYT, Hà Nội, Việt Nam, ban hành ngày 28/12/2017.
+ Bộ Y tế, Quyết định quy định chuẩn và định dạng dữ liệu đầu ra phục vụ việc quản lý, giám định, thanh toán chi phí khám bệnh, chữa bệnh và giải quyết các chế độ liên quan, Quyết định số 130/QĐ-BYT, Hà Nội, Việt Nam, ban hành ngày 18/01/2023.
+ Bộ Y tế, Quyết định sửa đổi, bổ sung một số điều của Quyết định số 130/QĐ-BYT ngày 18 tháng 01 năm 2023 của Bộ trưởng Bộ Y tế quy định chuẩn và định dạng dữ liệu đầu ra phục vụ việc quản lý, giám định, thanh toán chi phí khám bệnh, chữa bệnh và giải quyết các chế độ liên quan, Quyết định số 4750/QĐ-BYT, Hà Nội, Việt Nam, ban hành ngày 29/12/2023.
+ Bộ Y tế, Thông tư quy định trích chuyển dữ liệu điện tử trong quản lý và thanh toán chi phí khám bệnh, chữa bệnh bảo hiểm y tế, Thông tư số 48/2017/TT-BYT, Hà Nội, Việt Nam, ban hành ngày 28/12/2017.
