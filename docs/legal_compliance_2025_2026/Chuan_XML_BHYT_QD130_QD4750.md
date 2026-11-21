@@ -1,77 +1,63 @@
-# Chuẩn Dữ liệu Đầu ra XML Bảo hiểm Y tế (Quyết định 130/QĐ-BYT & Quyết định 4750/QĐ-BYT)
+# Chuẩn dữ liệu đầu ra XML BHYT (Quyết định 130/QĐ-BYT và 4750/QĐ-BYT)
 
-> **Tài liệu Căn cứ Pháp lý & Đặc tả Kỹ thuật Nghiệp vụ Y tế**  
-> **Áp dụng cho:** `01_clinic_lab_and_noise/business_noise_generators/Invoke-HISXmlSync_QD130_QD4750.ps1` và `03_siem_rules_v1_to_v4/`
+Căn cứ nghiệp vụ cho bộ sinh nhiễu đồng bộ XML BHYT.
+Áp dụng cho: `01_clinic_lab_and_noise/business_noise_generators/Invoke-HISXmlSync_QD130_QD4750.ps1` và `03_siem_rules_v1_to_v4/`.
 
----
-
-## 1. Thông tin Văn bản Pháp quy
+## 1. Thông tin văn bản
 
 | Thuộc tính | Quyết định 130/QĐ-BYT | Quyết định 4750/QĐ-BYT |
-| :--- | :--- | :--- |
-| **Cơ quan ban hành** | Bộ Y tế | Bộ Y tế |
-| **Số hiệu văn bản** | `130/QĐ-BYT` | `4750/QĐ-BYT` |
-| **Ngày ban hành** | 18/01/2023 | 29/12/2023 |
-| **Tên văn bản** | Quyết định quy định chuẩn và định dạng dữ liệu đầu ra phục vụ việc quản lý, giám định, thanh toán chi phí khám bệnh, chữa bệnh và giải quyết các chế độ liên quan | Quyết định sửa đổi, bổ sung một số điều của Quyết định số 130/QĐ-BYT ngày 18/01/2023 của Bộ trưởng Bộ Y tế |
-| **Văn bản liên quan** | Thông tư `48/2017/TT-BYT` (Quy định trích chuyển dữ liệu điện tử trong quản lý và thanh toán chi phí KCB BHYT) | Thông tư `13/2025/TT-BYT` (Hướng dẫn triển khai hồ sơ bệnh án điện tử) & Luật BVDLCN `91/2025/QH15` |
+| --- | --- | --- |
+| Cơ quan ban hành | Bộ Y tế | Bộ Y tế |
+| Số hiệu | 130/QĐ-BYT | 4750/QĐ-BYT |
+| Ngày ban hành | 18/01/2023 | 29/12/2023 |
+| Người ký | Thứ trưởng Trần Văn Thuấn | (tra cứu bản gốc trước khi cite) |
+| Hiệu lực | Kể từ ngày ký | Kể từ ngày ký |
+| Nội dung | Quy định chuẩn và định dạng dữ liệu đầu ra (XML) phục vụ quản lý, giám định, thanh toán chi phí khám chữa bệnh BHYT | Sửa đổi, bổ sung một số điều của Quyết định 130/QĐ-BYT |
 
----
+Chuỗi sửa đổi: Quyết định 4210/QĐ-BYT (2017) được thay bởi 130/QĐ-BYT (18/01/2023), rồi 130 được sửa đổi bổ sung bởi 4750/QĐ-BYT (29/12/2023), tiếp đó 3176/QĐ-BYT (29/12/2024) sửa đổi 4750, và 1931/QĐ-BYT (29/06/2026) sửa đổi 3176. Cite 130 và 4750 là ổn cho cấu trúc XML cơ bản; nếu muốn mốc mới nhất thì nhắc thêm 3176/2024 và 1931/2026.
 
-## 2. Bản chất Nghiệp vụ Trích chuyển Dữ liệu XML tại Phòng khám
+## 2. Bản chất nghiệp vụ trích chuyển XML tại phòng khám
 
-Theo quy định của Bộ Y tế và Bảo hiểm Xã hội (BHXH) Việt Nam, mọi cơ sở khám chữa bệnh (bao gồm các phòng khám đa khoa quy mô vừa và nhỏ có ký hợp đồng khám chữa bệnh BHYT) bắt buộc phải trích xuất dữ liệu từ Phần mềm Quản lý Thông tin Bệnh viện/Phòng khám (**HIS**) ra định dạng tệp **XML** theo chuẩn Quyết định 130/QĐ-BYT và 4750/QĐ-BYT ngay sau khi kết thúc lượt khám hoặc kết thúc điều trị để gửi lên Cổng Tiếp nhận dữ liệu Hệ thống Thông tin Giám định BHYT.
+Mọi cơ sở khám chữa bệnh có hợp đồng BHYT phải trích xuất dữ liệu từ phần mềm HIS ra tệp XML theo chuẩn 130 và 4750 sau mỗi lượt khám hoặc kết thúc điều trị, rồi gửi lên Cổng tiếp nhận dữ liệu Hệ thống thông tin giám định BHYT. Một số bảng chỉ tiêu cốt lõi:
 
-### Cấu trúc các Bảng chỉ tiêu Dữ liệu XML cốt lõi (XML1 – XML15)
-Trong quy trình vận hành thực tế tại phòng khám, mỗi hồ sơ bệnh nhân khi kết thúc khám sẽ kích hoạt tiến trình truy vấn CSDL SQL Server (`SRV02`) để tổng hợp và đóng gói các bảng XML sau:
+- XML1 (tổng hợp KCB): `MA_LK`, `MA_BN`, `HO_TEN`, `SO_CCCD`, `MA_THE_BHYT`, `MA_BENH_CHINH` (ICD-10), `NGAY_VAO`, `NGAY_RA`, tổng chi phí.
+- XML2 (chi tiết thuốc): danh mục thuốc, hàm lượng, liều, bác sĩ kê đơn (`MA_BAC_SI`).
+- XML3 (dịch vụ kỹ thuật, vật tư): xét nghiệm (LIS), chẩn đoán hình ảnh (PACS), thủ thuật.
+- XML4, XML5: cận lâm sàng, diễn biến lâm sàng.
+- XML7, XML8, XML9: giấy ra viện, tóm tắt hồ sơ, giấy nghỉ hưởng BHXH.
+- XML13, XML14: giấy chuyển tuyến, giấy hẹn khám lại (chuẩn hóa theo 4750).
 
-* **XML1 (Bảng Tổng hợp khám bệnh, chữa bệnh):** Chứa các trường định danh cốt lõi như `MA_LK` (Mã liên kết), `MA_BN` (Mã bệnh nhân), `HO_TEN`, `SO_CCCD` (Số định danh cá nhân/CCCD), `MA_THE_BHYT`, `MA_BENH_CHINH` (Mã ICD-10), `NGAY_VAO`, `NGAY_RA`, và tổng chi phí.
-* **XML2 (Bảng Chỉ tiết thuốc thanh toán):** Danh mục thuốc, hàm lượng, liều dùng, bác sĩ kê đơn (`MA_BAC_SI`).
-* **XML3 (Bảng Chi tiết dịch vụ kỹ thuật & vật tư y tế):** Xét nghiệm (LIS), Chẩn đoán hình ảnh (PACS/RIS), thủ thuật lâm sàng.
-* **XML4 (Bảng Chi tiết dịch vụ cận lâm sàng):** Kết quả chỉ số xét nghiệm, mô tả chẩn đoán.
-* **XML5 (Bảng Chi tiết diễn biến lâm sàng):** Quá trình theo dõi sinh hiệu, diễn biến bệnh án.
-* **XML7 / XML8 / XML9:** Giấy ra viện, Tóm tắt hồ sơ bệnh án, Giấy chứng nhận nghỉ việc hưởng BHXH.
-* **XML13 / XML14:** Giấy chuyển tuyến BHYT, Giấy hẹn khám lại (Bổ sung/chuẩn hóa theo QĐ 4750/QĐ-BYT).
+## 3. Ánh xạ sang lưu lượng hệ thống (nguồn nhiễu nền)
 
----
+Để tự động xuất và đồng bộ dữ liệu, phòng khám thường dùng tài khoản dịch vụ chạy ngầm (trong đồ án là `SVC_HIS_Sync` hoặc `SVC_HIS_Database`). Đây là nguồn gây nhiễu nền hợp lệ lớn nhất, và là lý do sinh cảnh báo giả nếu luật SIEM không tinh chỉnh:
 
-## 3. Ánh xạ từ Nghiệp vụ Y tế sang Lưu lượng Hệ thống (Telemetry & Business Noise)
+| Bước nghiệp vụ | Hoạt động kỹ thuật | Event ID | Vì sao gây cảnh báo giả ở V2/V3 |
+| --- | --- | --- | --- |
+| Xác thực dịch vụ định kỳ | `SVC_HIS_Sync` xin vé Kerberos TGS tới `DC01` để kết nối `MSSQLSvc/SRV02.clinic.local:1433` và SMB | 4769 (TicketEncryptionType 0x12 AES256), 4624 (Logon Type 3) | V2 nới điều kiện bắt Kerberoasting AES 0x12 làm hàng loạt 4769 hợp lệ bị bắt nhầm |
+| Tra cứu định danh bác sĩ | HIS truy vấn LDAP lên `DC01` để đối chiếu tài khoản `BS_*`, khoa phòng, quyền ký số | 1644 (LDAP Search) | V2 bắt mọi truy vấn LDAP để chống dò quét AD làm truy vấn hợp lệ của HIS bị nhầm là công cụ recon |
+| Truy vấn CSDL hàng loạt | Dịch vụ chạy nhiều SELECT trên các bảng bệnh án để gom dữ liệu xuất XML, tăng đột biến cuối ca | 33205 (action SELECT) trong Application Log | V2/V3 đặt ngưỡng đếm SELECT để bắt trích xuất dữ liệu làm tác vụ tổng hợp XML cuối ngày vượt ngưỡng |
+| Ghi và chia sẻ tệp XML | Đẩy tệp vào `\\SRV02\BenhAn$` cho cổng ký số và phần mềm giám định đọc | 5140, 5145 (truy cập share) | Trùng hành vi giao thức với kỹ thuật thu thập từ share (MITRE ATT&CK T1039) |
 
-Để quá trình trích chuyển XML diễn ra tự động và liên tục trong giờ hành chính mà không làm gián đoạn công việc của bác sĩ, kiến trúc CNTT tại các phòng khám vừa và nhỏ thường sử dụng một **Tài khoản Dịch vụ (Service Account)** chạy ngầm (trong đồ án định danh là `SVC_HIS_Sync` hoặc `SVC_HIS_Database`).
+## 4. Nguyên tắc tách nhiễu và tấn công ở luật V4
 
-Hoạt động hợp lệ này là **nguồn sinh nhiễu nền (Benign Background Traffic)** lớn nhất trong hệ thống mạng Active Directory và CSDL của phòng khám, trực tiếp gây ra hiện tượng **Quá tải cảnh báo giả (Alert Fatigue)** theo Nghịch lý Tỷ lệ Cơ sở (*Base-Rate Fallacy* - Axelsson, 1999) nếu luật SIEM không được tinh chỉnh:
+Script `Invoke-HISXmlSync_QD130_QD4750.ps1` thể hiện chu kỳ cổng tự động xuất và đồng bộ dữ liệu: chạy định kỳ dưới quyền tài khoản dịch vụ, xác thực Kerberos AES256 (0x12), chạy SELECT các bản ghi mới trên `SRV02`, tạo tệp cấu trúc thẻ chuẩn rồi lưu vào `\\SRV02\BenhAn$`. Dữ liệu nhạy cảm trong kiểm thử đều là dữ liệu giả lập và được băm ẩn danh qua `anonymize_sensitive_emr_logs.py` trước khi vào ELK.
 
-| Bước Nghiệp vụ | Hoạt động Kỹ thuật trên Hạ tầng Lab (`DC01`, `SRV02`) | Mã Sự kiện (Event ID) Sinh ra | Lý do Gây Cảnh báo Giả (False Positive) ở Luật SIEM V2/V3 |
-| :--- | :--- | :--- | :--- |
-| **1. Xác thực Dịch vụ Định kỳ** | Cứ mỗi 5 phút (hoặc sau mỗi lượt khám), tiến trình đồng bộ dùng tài khoản `SVC_HIS_Sync` yêu cầu vé dịch vụ Kerberos TGS tới `DC01` để kết nối vào `MSSQLSvc/SRV02.clinic.local:1433` và SMB Share. | **Windows Security Event ID `4769`** (với mã hóa `TicketEncryptionType: 0x12` - AES256) và **Event ID `4624`** (Logon Type 3). | Khi luật SIEM V2 mở rộng điều kiện để bắt tấn công **Kerberoasting OpSec AES (`0x12`)**, hàng nghìn sự kiện `4769` hợp lệ của `SVC_HIS_Sync` và phần mềm HIS bị bắt nhầm thành hành vi đánh cắp vé TGS. |
-| **2. Tra cứu Định danh Bác sĩ Kê đơn** | Phần mềm HIS truy vấn LDAP lên `DC01` để đối chiếu thông tin tài khoản bác sĩ (`BS_*`), khoa phòng và quyền ký số trước khi đóng gói thẻ `<MA_BAC_SI>` trong tệp XML2, XML3. | **Directory Service Event ID `1644`** (LDAP Search Query). | Khi luật SIEM V2 bắt mọi truy vấn LDAP để chống dò quét AD (`T1087.002`), các truy vấn kiểm tra phân quyền tự động của HIS bị nhận diện nhầm là công cụ dò quét định danh. |
-| **3. Truy vấn CSDL Bệnh án Hàng loạt** | Dịch vụ đồng bộ thực thi các câu lệnh `SELECT` liên tiếp trên bảng `HoSoBenhAn`, `ChiTietThuoc`, `DichVuKyThuat` trong SQL Server (`SRV02`) để gom dữ liệu xuất XML (đặc biệt tăng đột biến vào cuối ca hoặc giờ sao lưu). | **SQL Server Audit Event ID `33205`** (`ACTION_ID: SL` - Select) trong Windows Application Log. | Khi luật SIEM V2/V3 đặt ngưỡng đếm số lượng bản ghi `SELECT` để bắt hành vi trích xuất dữ liệu (Data Exfiltration), tác vụ tổng hợp XML BHYT cuối ngày vượt ngưỡng và kích hoạt cảnh báo giả. |
-| **4. Ghi và Chia sẻ Tệp XML qua Mạng Nội bộ** | Tệp `.xml` sau khi kết xuất được đẩy vào thư mục chia sẻ nội bộ `\\SRV02\BenhAn$` để cổng ký số và phần mềm giám định BHYT đọc/gửi đi. | **Windows Security Event ID `5140` / `5145`** (Network Share Object Access). | Trùng lặp hoàn toàn về mặt hành vi giao thức với kỹ thuật thu thập dữ liệu từ thư mục chia sẻ (**MITRE ATT&CK T1039** - Data from Network Shared Drive). |
+Luật V4 dùng phễu hai lớp:
 
----
+1. Whitelist theo ngữ cảnh chặt cho thao tác đọc (SELECT, 4769): chỉ loại trừ khi đồng thời đúng tài khoản `SVC_HIS_Sync`, đúng IP `SRV02`, và chỉ dừng ở truy vấn đọc theo mẫu kết xuất XML. Nếu `SVC_HIS_Sync` xin vé hoặc đăng nhập SQL từ máy trạm `WS01` thì bắn cảnh báo ngay.
+2. Chốt chặn cho thao tác phá hủy và vô hiệu hóa phòng thủ: nghiệp vụ XML theo 130 và 4750 là chỉ đọc và trích xuất, không bao giờ DELETE/DROP/TRUNCATE bệnh án, không bật `xp_cmdshell` (15457), không tắt Audit (33205 STATE OFF). Vì vậy nhánh giám sát toàn vẹn bệnh án không whitelist cho ai cả; kể cả kẻ tấn công dùng chính `SVC_HIS_Sync` để xóa bệnh án hay tắt Audit thì vẫn bị bắt.
 
-## 4. Nguyên tắc Thiết kế Luật SIEM V4 & Kịch bản Mô phỏng trong Đồ án
+Lưu ý: các con số tỷ lệ giảm cảnh báo là minh họa dự kiến, điền số thật sau khi replay.
 
-### 4.1. Tham số hóa trong Script Sinh nhiễu (`Invoke-HISXmlSync_QD130_QD4750.ps1`)
-Script mô phỏng lưu lượng nền trong đồ án tái hiện chính xác chu kỳ làm việc của cổng trích chuyển XML theo QĐ 130/QĐ-BYT & QĐ 4750/QĐ-BYT:
-* **Chu kỳ thực thi:** Chạy định kỳ mỗi 5 phút thông qua Windows Scheduled Task dưới quyền tài khoản dịch vụ.
-* **Luồng hành vi:** Xác thực Kerberos AES256 (`0x12`) $\rightarrow$ Truy vấn `SELECT` các bản ghi bệnh án mới phát sinh trong SQL Server trên `SRV02` $\rightarrow$ Khởi tạo tệp cấu trúc thẻ chuẩn `<GIAMDINHBHYT>` (chứa `XML1`, `XML2`, `XML3`) $\rightarrow$ Lưu tệp vào `\\SRV02\BenhAn$\XML_Export_QD130\`.
-* **Tuân thủ Luật BVDLCN 91/2025/QH15:** Các trường dữ liệu nhạy cảm (`HO_TEN`, `SO_CCCD`, `MA_BENH_CHINH`) sinh ra trong quá trình kiểm thử đều là dữ liệu giả lập (Synthetic Data) và được băm ẩn danh qua `anonymize_sensitive_emr_logs.py` trước khi nạp vào ELK Stack.
+## 5. Nguồn tra cứu
 
-### 4.2. Cơ chế Phân tách Nhiễu Nghiệp vụ và Tấn công Lẩn tránh ở Luật V4
-Để loại bỏ **99.85% cảnh báo giả** từ hoạt động đồng bộ XML BHYT mà không tạo ra "điểm mù" cho kẻ tấn công lợi dụng tài khoản `SVC_HIS_Sync` (kỹ thuật *Living-off-the-Whitelist*), bộ luật **V4 (`v4_contextual_clinic_tuned`)** áp dụng nguyên tắc **Phễu lọc hai lớp (Two-Stage Funnel)**:
+- Quyết định 130/QĐ-BYT (TVPL): https://thuvienphapluat.vn/van-ban/the-thao-y-te/Quyet-dinh-130-QD-BYT-2023-chuan-dinh-dang-du-lieu-dau-ra-phuc-vu-quan-ly-chi-phi-kham-chua-benh-553072.aspx
+- Quyết định 130 bản PDF (LuatVietnam): https://luatvietnam.vn/y-te/quyet-dinh-130-qd-byt-241607-d1.html
 
-1. **Whitelist có điều kiện ngữ cảnh chặt (Contextual Whitelist) đối với thao tác ĐỌC (`SELECT` / `4769`):**
-   * Chỉ loại trừ cảnh báo khi thỏa mãn đồng thời bộ 3 điều kiện: `SubjectUserName == "SVC_HIS_Sync"` **AND** `SourceAddress == IP_SRV02` **AND** hành vi chỉ dừng ở mức truy vấn đọc dữ liệu theo đúng mẫu Stored Procedure kết xuất XML.
-   * Nếu tài khoản `SVC_HIS_Sync` yêu cầu vé TGS (`4769`) hoặc đăng nhập SQL từ máy trạm lễ tân `WS01` (sai lệch `ClientAddress`), luật V4 lập tức kích hoạt cảnh báo.
-2. **Chốt chặn Không khoan nhượng (Zero-Tolerance Choke Point) đối với thao tác PHÁ HỦY & VÔ HIỆU HÓA PHÒNG THỦ:**
-   * Nghiệp vụ trích chuyển XML theo Quyết định 130/QĐ-BYT và 4750/QĐ-BYT là **nghiệp vụ chỉ đọc và trích xuất (Read-Only Extraction)** từ CSDL bệnh án, tuyệt đối không bao giờ thực thi lệnh xóa bệnh án (`DELETE`, `DROP`, `TRUNCATE`), không bao giờ bật `xp_cmdshell` (**Event ID `15457`**) và không bao giờ tắt cơ chế kiểm toán `ALTER SERVER AUDIT ... WITH (STATE = OFF)` (**Event ID `33205`**).
-   * Do đó, ở nhánh giám sát tính toàn vẹn bệnh án điện tử (theo **Thông tư 13/2025/TT-BYT**), luật V4 **không áp dụng bất kỳ Whitelist nào** cho `SVC_HIS_Sync`. Ngay cả khi kẻ tấn công chiếm được quyền điều khiển trực tiếp trên `SRV02` và dùng chính `SVC_HIS_Sync` để xóa bệnh án hoặc tắt SQL Audit, hệ thống vẫn bắt giữ **100% (Recall = 100%)**.
-
----
-
-## 5. Trích dẫn Chuẩn IEEE
+## 6. Trích dẫn chuẩn IEEE
 
 ```text
- Bộ Y tế, Quyết định quy định chuẩn và định dạng dữ liệu đầu ra phục vụ việc quản lý, giám định, thanh toán chi phí khám bệnh, chữa bệnh và giải quyết các chế độ liên quan, Quyết định số 130/QĐ-BYT, Hà Nội, Việt Nam, ban hành ngày 18/01/2023.
- Bộ Y tế, Quyết định sửa đổi, bổ sung một số điều của Quyết định số 130/QĐ-BYT ngày 18 tháng 01 năm 2023 của Bộ trưởng Bộ Y tế quy định chuẩn và định dạng dữ liệu đầu ra phục vụ việc quản lý, giám định, thanh toán chi phí khám bệnh, chữa bệnh và giải quyết các chế độ liên quan, Quyết định số 4750/QĐ-BYT, Hà Nội, Việt Nam, ban hành ngày 29/12/2023.
- Bộ Y tế, Thông tư quy định trích chuyển dữ liệu điện tử trong quản lý và thanh toán chi phí khám bệnh, chữa bệnh bảo hiểm y tế, Thông tư số 48/2017/TT-BYT, Hà Nội, Việt Nam, ban hành ngày 28/12/2017.
+[1] Bộ Y tế, "Quyết định quy định chuẩn và định dạng dữ liệu đầu ra phục vụ việc quản lý, giám định, thanh toán chi phí khám bệnh, chữa bệnh và giải quyết các chế độ liên quan," Quyết định số 130/QĐ-BYT, Hà Nội, Việt Nam, ngày 18/01/2023.
+[2] Bộ Y tế, "Quyết định sửa đổi, bổ sung một số điều của Quyết định số 130/QĐ-BYT," Quyết định số 4750/QĐ-BYT, Hà Nội, Việt Nam, ngày 29/12/2023.
+[3] Bộ Y tế, "Quyết định sửa đổi, bổ sung Quyết định số 4750/QĐ-BYT," Quyết định số 3176/QĐ-BYT, Hà Nội, Việt Nam, ngày 29/12/2024.
+```
