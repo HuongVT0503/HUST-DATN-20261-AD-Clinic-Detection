@@ -2,10 +2,11 @@
 .SYNOPSIS
     Setup_SMB_BenhAn_Share.ps1
     Khởi tạo thư mục C:\HoSoBenhAn_XML, mở SMB Share ẩn \\SRV02\BenhAn$,
-    cấu hình SACL Auditing (Event ID 5140/5145) và sinh 20 tệp XML BHYT mẫu
-    theo Quyết định 130/QĐ-BYT & 4750/QĐ-BYT .
+    cấu hình SACL Auditing (Event ID 5140/5145) và sinh 20 tệp XML BHYT mẫu theo Quyết định 130/QĐ-BYT & 4750/QĐ-BYT.
 .NOTES
     Chạy trên máy chủ bệnh án SRV02 (SRV02.clinic.local).
+    Chuẩn định dạng XML BHYT: xem docs/legal_compliance_2025_2026/Chuan_XML_BHYT_QD130_QD4750.md
+    GUID subcategory File Share/Detailed File Share là GUID chuẩn của Microsoft (audit policy).
 #>
 
 $ErrorActionPreference = "Stop"

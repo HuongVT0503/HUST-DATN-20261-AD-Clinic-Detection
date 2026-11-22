@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 """
 Tệp: 01_clinic_lab_and_noise/log_anonymizer/anonymize_sensitive_emr_logs.py
-Đồ án Tốt nghiệp Kỳ 2026.1 - Đại học Bách khoa Hà Nội (HUST)
-Sinh viên thực hiện: Vũ Thúy Hường - MSSV: 20225135
 Mô tả: Công cụ ẩn danh hóa dữ liệu cá nhân nhạy cảm (Số CCCD, Mã thẻ BHYT, Họ tên bệnh nhân)
        trong nhật ký kiểm toán (JSON/CSV/XML) theo quy định tại Luật Bảo vệ dữ liệu cá nhân
        số 91/2025/QH15 và Nghị định 356/2025/NĐ-CP (hiệu lực từ 01/01/2026).
@@ -17,7 +15,9 @@ from pathlib import Path
 SALT_SECRET = "HUST_DATN_20261_PDPL_91_2025_QH15_SALT"
 
 # Biểu thức chính quy nhận diện dữ liệu nhạy cảm của bệnh nhân trong log
+# Số CCCD: 12 chữ số, bắt đầu bằng 0 (chuẩn CCCD Việt Nam).
 REGEX_CCCD = re.compile(r"\b(0\d{11})\b")
+# Mã thẻ BHYT: 2 chữ cái + 13 chữ số = đúng 15 ký tự (khớp dữ liệu sinh ra ở Init_HIS_EMR_Schema.sql và Setup_SMB_BenhAn_Share.ps1). Nếu đổi định dạng mã thẻ thì sửa luôn ở đây.
 REGEX_BHYT = re.compile(r"\b([A-Z]{2}\d{13})\b")
 REGEX_PATIENT_NAME = re.compile(
     r"(Nguyễn Văn An|Trần Thị Bình|Lê Hoàng Cường|Phạm Minh Dũng|Hoàng Thu Hà|"
@@ -61,7 +61,7 @@ def main():
         # Chạy kiểm thử tự động (Self-test demo) khi không truyền tham số
         sample_sql_audit_log = (
             "EventID=33205 | action_id=SL | class_type=U | server_principal_name=CLINIC\\SVC_HIS_Database | "
-            "statement=SELECT MaBenhAn, SoCCCD='001204100001', MaTheBHYT='DN401012000001', "
+            "statement=SELECT MaBenhAn, SoCCCD='001204100001', MaTheBHYT='DN4010120000001', "
             "HoTen=N'Nguyễn Văn An (1)' FROM HIS_ClinicDB.dbo.HoSoBenhAn;"
         )
         print("[*] Bản ghi SQL Audit 33205 gốc:")

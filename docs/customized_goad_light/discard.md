@@ -38,4 +38,5 @@ File Vagrant và Ansible tôi vẫn giữ trong `iac_goad_light_custom/` cho ai 
 
 - **LAPS:** GOAD-Light không bật LAPS (các nhóm `[laps_*]` để trống, `use_laps` = false)
 - **GPO / delegation / chuỗi ACL phức tạp:** config.json của GOAD-Light không có các khối riêng tên `gpos`, `delegations`. Phần ACL nằm lồng trong từng domain, không phải một khối lớn ở cấp cao nhất.
-- **Những thứ tôi giữ cơ chế:** tạo forest và OU, service account có SPN để Kerberoast, AS-REP roasting, SMB share phân quyền lỏng, và MSSQL có đường leo quyền. Chi tiết xem file keep.md.
+- **Những thứ tôi giữ cơ chế:** tạo forest và OU, service account có SPN để Kerberoast, SMB share phân quyền lỏng, và MSSQL có đường leo quyền. Chi tiết xem file keep.md.
+- **Những thứ tôi bỏ cho gọn, bám đúng 3 kịch bản PGNV:** AS-REP roasting (`SVC_Backup_Legacy`) vì không kịch bản nào trong PGNV dùng tới; mật khẩu để lộ trong trường Description.

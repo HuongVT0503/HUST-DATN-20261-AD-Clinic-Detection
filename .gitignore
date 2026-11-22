@@ -1,5 +1,8 @@
 .venv/
 __pycache__/
+# Tệp CSV 200 định danh được Import-ClinicADUsers.ps1 tự sinh lúc chạy (chứa mật khẩu lab
+# dạng plaintext), không commit. Bản mẫu 10 dòng để xem trước là clinic_staff_identities.sample_10rows.csv
+01_clinic_lab_and_noise/ad_identity_200_users/clinic_200_staff_identities.csv
 *.pyc
 .ipynb_checkpoints/
 03_siem_rules_v1_to_v4/elk_docker_wsl2/esdata/

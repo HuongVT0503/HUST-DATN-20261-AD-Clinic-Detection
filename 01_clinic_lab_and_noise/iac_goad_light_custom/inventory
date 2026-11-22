@@ -65,7 +65,6 @@ repo_guest_path=C:\HUST-DATN-20261-AD-Clinic-Detection
 ; Tài khoản dịch vụ trọng tâm của đồ án
 his_sql_svc_account=SVC_HIS_Database
 his_sync_svc_account=SVC_HIS_Sync
-his_backup_svc_account=SVC_Backup_Legacy
 his_database_name=HIS_ClinicDB
 his_smb_share_name=BenhAn$
 

@@ -1,8 +1,6 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 # ==============================================================================
-# ĐỒ ÁN TỐT NGHIỆP KỲ 2026.1 - ĐẠI HỌC BÁCH KHOA HÀ NỘI (HUST)
-# Sinh viên thực hiện: Vũ Thúy Hường - MSSV: 20225135
 # Mô tả: Khai báo IaC Vagrant triển khai 3 máy ảo GOAD-Light Clinic Edition:
 #        1. DC01  (192.168.56.10) - Domain Controller (clinic.local)
 #        2. SRV02 (192.168.56.22) - HIS Database (MSSQL) & File Server (BenhAn$)

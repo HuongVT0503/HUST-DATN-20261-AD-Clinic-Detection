@@ -1,14 +1,15 @@
 ---
 # ==============================================================================
-# ĐỒ ÁN TỐT NGHIỆP KỲ 2026.1 - ĐẠI HỌC BÁCH KHOA HÀ NỘI (HUST)
-# Sinh viên thực hiện: Vũ Thúy Hường - MSSV: 20225135
 # Tệp: 01_clinic_lab_and_noise/iac_goad_light_custom/provisioning_clinic.yml
 # Mô tả: Playbook Ansible tự động hóa toàn bộ quá trình dựng Lab Phòng khám 3 VMs:
 #        - PLAY 1: Nâng cấp DC01 lên Domain Controller (clinic.local)
 #        - PLAY 2: Khởi tạo 6 OUs, 5 Groups, 200 Users, SVC_HIS_Database & Audit 1644/4769
 #        - PLAY 3: Đưa SRV02 và WS01 gia nhập miền clinic.local
 #        - PLAY 4: Cài đặt MS SQL Server, HIS_ClinicDB, Audit 33205 & Share \\SRV02\BenhAn$
-#        - PLAY 5: Phân quyền giao ca trên WS01 và triển khai Sysmon trên cả 3 nút
+#        - PLAY 5: Phân quyền giao ca trên WS01 và cài sqlcmd
+#        - PLAY 6: Triển khai Sysmon trên cả 3 nút (DC01, SRV02, WS01)
+# LƯU Ý: PLAY 6 nạp sysmon_clinic_config.xml. File đó hiện đang RỖNG, phải điền trước khi
+#        chạy thật, nếu không Sysmon sẽ không sinh Event ID 1 (ProcessCreate) cho 3 kịch bản.
 # ==============================================================================
 
 # ==============================================================================

@@ -79,6 +79,14 @@ Sơ đồ minh họa luồng liên kết giữa **3 phần** của đồ án:
 +======================================================================================+
 ```
 
+> **Lưu ý triển khai hạ tầng (quan trọng):** Luồng chính của đồ án là dựng **3 máy EC2 Windows
+> riêng biệt trên AWS** (DC01, SRV02, WS01) rồi dựng miền `clinic.local` từ đầu bằng các script trong
+> `01_clinic_lab_and_noise/iac_goad_light_custom/aws_powershell_bootstrap/` (xem `AWS_EC2_3VM_DEPLOYMENT_GUIDE.md`).
+> Lý do: máy cá nhân chỉ 8GB RAM không dựng nổi 3 VM cùng lúc, và AWS cho phép bật/tắt theo giờ để tiết kiệm chi phí.
+> `Vagrantfile` + `provisioning_clinic.yml` chỉ là **đường phụ để dựng lab bằng VirtualBox trên máy
+> mạnh (>=16GB RAM)**, không phải luồng chính. AD được dựng mới chứ không deploy nguyên GOAD-Light rồi
+> xóa; phần đối chiếu cái gì kế thừa từ GOAD-Light xem `docs/customized_goad_light/`.
+
 ---
 
 ## Cấu trúc mã nguồn (Repository Structure)
@@ -117,7 +125,8 @@ HUST-DATN-20261-AD-Clinic-Detection/
 │
 └── docs/                                     # Tài liệu căn cứ pháp lý (2025-2026), trích dẫn học thuật & Playbook
     ├── legal_compliance_2025_2026/           # Tóm tắt yêu cầu kỹ thuật từ luật BVDLCN 2025, NĐ 356, TT 13/2025/TT-BYT
-    └── academic_references/                  # Cơ sở lý thuyết: Base-Rate Fallacy (Axelsson, 1999) & Alert Granularity
+    ├── academic_references/                  # Cơ sở lý thuyết: Base-Rate Fallacy (Axelsson), GHOSTS/ATLASv2/HIKARI (sinh nhiễu)
+    └── customized_goad_light/                # Đối chiếu GOAD-Light gốc: giữ/sửa/bỏ gì (keep.md, discard.md)
 
 ```
 
@@ -187,4 +196,8 @@ Quy trình thực nghiệm tách pha thu thập dữ liệu và pha phân tích:
 3. **Bộ Y tế (2025)**, *Thông tư số 13/2025/TT-BYT hướng dẫn triển khai hồ sơ bệnh án điện tử*, ban hành ngày 06/06/2025 (Quy định lộ trình hoàn thành triển khai bệnh án điện tử trước ngày 31/12/2026).
 4. **Bộ Y tế (2023)**, *Quyết định số 130/QĐ-BYT và Quyết định số 4750/QĐ-BYT quy định chuẩn và định dạng dữ liệu đầu ra (XML) phục vụ quản lý, giám định và thanh toán chi phí khám chữa bệnh BHYT*.
 5. **Axelsson, S. (1999)**, *"The Base-Rate Fallacy and the Difficulty of Intrusion Detection"*, ACM Transactions on Information and System Security (TISSEC).
-6. **SigmaHQ & Orange Cyberdefense (2025)**, *Sigma Detection Format Specification & Game of Active Directory (GOAD-Light) Architecture*.
+6. **SigmaHQ & Orange Cyberdefense (2025)**, *Sigma Detection Format Specification & Game of Active Directory (GOAD-Light) Architecture*. https://github.com/Orange-Cyberdefense/GOAD
+7. **Updyke, D. et al. (2018)**, *"GHOSTS in the Machine: A Framework for Cyber-Warfare Exercise NPC Simulation"*, Technical Report CMU/SEI-2018-TR-005, Software Engineering Institute, Carnegie Mellon University. DOI 10.1184/R1/12363029.v1 (cơ sở phương pháp luận cho bộ sinh nhiễu).
+8. **Riddle, A., Westfall, K., Bates, A. (2024)**, *"ATLASv2: ATLAS Attack Engagements, Version 2"*, arXiv:2401.01341 (dataset benign + attack gán nhãn theo thời gian).
+9. **Ferriyan, A. et al. (2021)**, *"Generating Network Intrusion Detection Dataset Based on Real and Encrypted Synthetic Attack Traffic"*, Applied Sciences, 11(17), 7868. DOI 10.3390/app11177868.
+10. **CISA (2020)**, *#StopRansomware: Healthcare and Public Health (HPH) Sector* (Advisory AA20-302A). https://www.cisa.gov/stopransomware/healthcare-and-public-health-sector

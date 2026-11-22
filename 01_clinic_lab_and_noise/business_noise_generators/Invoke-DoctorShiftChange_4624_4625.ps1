@@ -1,12 +1,17 @@
 <#
 .SYNOPSIS
     Invoke-DoctorShiftChange_4624_4625.ps1
-    Mô phỏng lưu lượng nền nghiệp vụ y tế: Y bác sĩ và điều dưỡng đăng nhập/đăng xuất
-    đổi ca trực liên tục trên máy trạm dùng chung WS01 (kèm tỷ lệ 5% gõ sai mật khẩu).
+    Mô phỏng lưu lượng nền nghiệp vụ y tế: Y bác sĩ và điều dưỡng đăng nhập/đăng xuất đổi ca trực liên tục trên máy trạm dùng chung WS01 (tỷ lệ 5% gõ sai mật khẩu).
     Sinh sự kiện Windows Security Event ID 4624 (Success) và 4625 (Failure) trên DC01 & WS01.
 .NOTES
-    Đồ án Tốt nghiệp Kỳ 2026.1 - Sinh viên: Vũ Thúy Hường (MSSV: 20225135)
-    Phương pháp luận: Synthetic Benign Activity Generation , .
+    CƠ SỞ HỌC THUẬT (chi tiết + link: docs/academic_references/Noise_Generation_GHOSTS_Methodology.md):
+    - Sinh lưu lượng nền hợp lệ mô phỏng hành vi người dùng để khó phân biệt với thật:
+      GHOSTS Framework, Updyke et al., CMU/SEI-2018-TR-005 (2018). github.com/cmu-sei/GHOSTS
+    - Dataset benign + attack gán nhãn theo thời gian làm chuẩn so sánh: ATLASv2 (arXiv:2401.01341),
+      HIKARI-2021 (Appl. Sci. 2021, 11, 7868, doi.org/10.3390/app11177868)
+    - Rủi ro ransomware ngành y tế lây qua AD/tài khoản dùng chung: CISA #StopRansomware HPH, AA20-302A
+      (cisa.gov/stopransomware/healthcare-and-public-health-sector)
+    Tôi hiện thực hóa bằng P/Invoke LogonUser để sinh đúng Event ID 4624/4625 native thay vì giả log.
 #>
 
 param(
@@ -40,7 +45,11 @@ public class Win32Auth {
 "@
 Add-Type -TypeDefinition $LogonApiCode -ErrorAction SilentlyContinue
 
-# Danh sách tài khoản Y Bác sĩ, Điều dưỡng, Lễ tân tham gia đổi ca
+# Danh sách tài khoản Y Bác sĩ, Điều dưỡng, Lễ tân tham gia đổi ca.
+# GIẢ ĐỊNH MÔ HÌNH HÓA (tham số lab, không phải số liệu quy định): máy trạm quầy tiếp đón BHYT/cấp cứu dùng
+# chung giữa các ca trực, giờ giao ca 7h/12h/17h. Rủi ro tài khoản dùng chung trong ngành y tế có CĂN CỨ chung
+# ở CISA #StopRansomware HPH (AA20-302A), còn khung giờ cụ thể là tôi tự đặt, hợp thực tế.
+# Hệ quả: 4624/4625 dồn dập -> luật brute-force dễ báo nhầm (FP), chính là tiếng ồn whitelist V4 phải xử lý.
 $ShiftUsers = @()
 1..30 | ForEach-Object { $ShiftUsers += ("BS_BacSi{0:D3}" -f $_) }
 1..40 | ForEach-Object { $ShiftUsers += ("YT_YTa{0:D3}" -f $_) }
@@ -60,7 +69,7 @@ for ($i = 1; $i -le $TotalAuthEvents; $i++) {
         net use "\\$TargetServer\IPC$" $WrongPass /user:"$DomainName\$SelectedUser" 2>$null | Out-Null
         Write-Host "[$i/$TotalAuthEvents] [4625 - GÕ NHẦM PASS] $DomainName\$SelectedUser đăng nhập thất bại do gõ sai phím." -ForegroundColor Yellow
 
-        # Ngay sau khi gõ sai 1–2 giây, nhân viên gõ lại mật khẩu đúng -> Sinh Event ID 4624
+        # Ngay sau khi gõ sai 1-2 giây, nhân viên gõ lại mật khẩu đúng -> Sinh Event ID 4624
         Start-Sleep -Milliseconds (Get-Random -Minimum 800 -Maximum 1800)
         [Win32Auth]::LogonUser($SelectedUser, $DomainName, $CorrectPass, 2, 0, [ref]$Token) | Out-Null
         if ($Token -ne [IntPtr]::Zero) { [Win32Auth]::CloseHandle($Token) | Out-Null }

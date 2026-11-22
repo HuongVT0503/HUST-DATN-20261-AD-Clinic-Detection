@@ -1,9 +1,20 @@
 /*
 ================================================================================
 Tệp: 01_clinic_lab_and_noise/his_mssql_database/Init_HIS_EMR_Schema.sql
-Mô tả: Khởi tạo CSDL HIS_ClinicDB, bảng dbo.HoSoBenhAn (50 bệnh án điện tử đã ký số
-       theo Thông tư 13/2025/TT-BYT  và Luật BVDLCN 91/2025/QH15 ),
-       và phân quyền cho tài khoản dịch vụ CLINIC\SVC_HIS_Database, CLINIC\SVC_HIS_Sync.
+Mô tả: Khởi tạo CSDL HIS_ClinicDB, bảng dbo.HoSoBenhAn (50 bệnh án điện tử đã ký số theo Thông tư 13/2025/TT-BYT), và phân quyền TỐI THIỂU cho 2 tài khoản dịch vụ.
+
+Nguyên tắc phân quyền tối thiểu (least privilege) -> Kịch bản 3 tập trung vào leo thang đặc quyền các ràng buộc này:
+  - SVC_HIS_Database: db_datareader + db_datawriter, nhưng bị DENY DELETE trên bảng
+    bệnh án đã ký số. KHÔNG cấp sysadmin. Ở mức này thì hành vi bình thường của phần mềm
+    HIS (SELECT/INSERT/UPDATE) vẫn chạy, nhưng không xóa được bệnh án đã ký.
+  - SVC_HIS_Sync: tạo thêm 1 SQL Login (mixed mode) chỉ có db_datareader, để script
+    sinh nhiễu Invoke-HISXmlSync chạy sqlcmd -U/-P kết nối được từ tiến trình bất kỳ.
+  => Vì 2 tài khoản KHÔNG phải sysadmin, Kịch bản 3 bắt buộc phải leo thang (ALTER
+     SERVER ROLE sysadmin ADD MEMBER ...) mới vượt qua DENY và tắt được Audit. Bước leo
+     thang đó chính là điểm mốc để luật V4 bắt (Event 33205). Nếu cấp sẵn sysadmin ở
+     đây thì không cần leo thanh vì tài khoản cơ bản đã có sẵn quyền và trái TT13.
+
+Yêu cầu: SQL Server cài ở chế độ Mixed Mode (/SECURITYMODE=SQL) để tạo được SQL Login.
 ================================================================================
 */
 
@@ -17,19 +28,19 @@ BEGIN
 END
 GO
 
--- 1. Cấp quyền Windows Login cho tài khoản dịch vụ Active Directory trên SRV02
+-- 1a. Windows Login cho SVC_HIS_Database (tài khoản bị Kerberoast ở Kịch bản 2)
 IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'CLINIC\SVC_HIS_Database')
 BEGIN
     CREATE LOGIN [CLINIC\SVC_HIS_Database] FROM WINDOWS WITH DEFAULT_DATABASE = [HIS_ClinicDB];
 END
-ALTER SERVER ROLE [sysadmin] ADD MEMBER [CLINIC\SVC_HIS_Database];
 GO
 
-IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'CLINIC\SVC_HIS_Sync')
+-- 1b. SQL Login cho SVC_HIS_Sync (phần mềm HIS đồng bộ BHYT thường dùng SQL auth).
+--     có bước này nên sqlcmd -U SVC_HIS_Sync -P Password123! trong script sinh nhiễu mới chạy được
+IF NOT EXISTS (SELECT name FROM sys.server_principals WHERE name = N'SVC_HIS_Sync')
 BEGIN
-    CREATE LOGIN [CLINIC\SVC_HIS_Sync] FROM WINDOWS WITH DEFAULT_DATABASE = [HIS_ClinicDB];
+    CREATE LOGIN [SVC_HIS_Sync] WITH PASSWORD = N'Password123!', DEFAULT_DATABASE = [HIS_ClinicDB], CHECK_POLICY = OFF;
 END
-ALTER SERVER ROLE [sysadmin] ADD MEMBER [CLINIC\SVC_HIS_Sync];
 GO
 
 USE [HIS_ClinicDB];
@@ -48,17 +59,10 @@ BEGIN
         [PhacDoDieuTri] NVARCHAR(500) NOT NULL,
         [BacSiDieuTri]  VARCHAR(50)   NOT NULL,
         [ChuKySoPKI]    VARCHAR(128)  NOT NULL,
-        [DaKySoTT13]    BIT           NOT NULL DEFAULT 1, -- 1 = Hồ sơ đã ký số khóa theo TT 13/2025/TT-BYT
+        [DaKySoTT13]    BIT           NOT NULL DEFAULT 1, -- 1 = Hồ sơ đã ký số, khóa xóa theo TT 13/2025/TT-BYT
         [NgayCapNhat]   DATETIME2     NOT NULL DEFAULT SYSDATETIME()
     );
     PRINT N'[+] Đã tạo bảng dbo.HoSoBenhAn.';
-END
-GO
-
--- Tạo View tương thích ngược dbo.BenhAnDienTu trỏ vào dbo.HoSoBenhAn
-IF OBJECT_ID(N'dbo.BenhAnDienTu', N'V') IS NULL
-BEGIN
-    EXEC('CREATE VIEW dbo.BenhAnDienTu AS SELECT * FROM dbo.HoSoBenhAn');
 END
 GO
 
@@ -71,7 +75,8 @@ BEGIN
     BEGIN
         DECLARE @MaBA VARCHAR(20)  = 'BA2026_' + RIGHT('0000' + CAST(@i AS VARCHAR(4)), 4);
         DECLARE @CCCD CHAR(12)     = '001204' + RIGHT('000000' + CAST((100000 + @i) AS VARCHAR(6)), 6);
-        DECLARE @BHYT VARCHAR(15)  = 'DN4010120' + RIGHT('00000' + CAST(@i AS VARCHAR(5)), 5);
+        -- Mã thẻ BHYT 15 ký tự: 2 chữ + 13 số (khớp regex bên log_anonymizer)
+        DECLARE @BHYT VARCHAR(15)  = 'DN' + RIGHT('0000000000000' + CAST((4010120000000 + @i) AS VARCHAR(13)), 13);
         DECLARE @BacSi VARCHAR(50) = 'CLINIC\BS_BacSi' + RIGHT('000' + CAST(((@i % 60) + 1) AS VARCHAR(3)), 3);
 
         DECLARE @HoTen NVARCHAR(100) = CASE (@i % 8)
@@ -114,4 +119,26 @@ BEGIN
     END
     PRINT N'[+] Đã nạp thành công 50 hồ sơ bệnh án điện tử mẫu vào dbo.HoSoBenhAn.';
 END
+GO
+
+-- ============================================================================
+-- 4. PHÂN QUYỀN TỐI THIỂU
+-- ============================================================================
+
+-- 4a. SVC_HIS_Database: đọc + ghi, NHƯNG bị khóa quyền xóa bệnh án đã ký số (TT 13/2025/TT-BYT)
+CREATE USER [CLINIC\SVC_HIS_Database] FOR LOGIN [CLINIC\SVC_HIS_Database];
+ALTER ROLE [db_datareader] ADD MEMBER [CLINIC\SVC_HIS_Database];
+ALTER ROLE [db_datawriter] ADD MEMBER [CLINIC\SVC_HIS_Database];
+GRANT EXECUTE TO [CLINIC\SVC_HIS_Database];
+-- Chốt TT13: tài khoản dịch vụ không được xóa bệnh án. Chỉ sysadmin mới bypass được DENY
+-- => Kịch bản 3 buộc phải leo thang lên sysadmin-> hành vi cần bắt.
+DENY DELETE ON [dbo].[HoSoBenhAn] TO [CLINIC\SVC_HIS_Database];
+GO
+
+-- 4b. SVC_HIS_Sync: chỉ đọc (phục vụ đồng bộ XML BHYT và tra cứu lẻ trong script sinh nhiễu)
+CREATE USER [SVC_HIS_Sync] FOR LOGIN [SVC_HIS_Sync];
+ALTER ROLE [db_datareader] ADD MEMBER [SVC_HIS_Sync];
+GO
+
+PRINT N'[+] Đã cấp quyền tối thiểu: SVC_HIS_Database (đọc/ghi, cấm xóa bệnh án đã ký), SVC_HIS_Sync (chỉ đọc).';
 GO

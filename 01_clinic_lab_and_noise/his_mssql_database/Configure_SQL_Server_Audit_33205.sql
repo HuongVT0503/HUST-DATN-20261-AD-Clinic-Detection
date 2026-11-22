@@ -2,7 +2,8 @@
 ================================================================================
 Tệp: 01_clinic_lab_and_noise/his_mssql_database/Configure_SQL_Server_Audit_33205.sql
 Mô tả: Kích hoạt cơ chế ghi vết kiểm toán SQL Server Audit đẩy vào Windows Application
-       Event Log (Event ID 33205) phục vụ giám sát theo Thông tư 13/2025/TT-BYT , .
+       Event Log (Event ID 33205) phục vụ giám sát theo Thông tư 13/2025/TT-BYT.
+       Tham khảo: SQL Server Audit Records (Microsoft Learn), xem docs/customized_goad_light/keep.md.
 ================================================================================
 */
 
@@ -36,10 +37,15 @@ GO
 ALTER SERVER AUDIT [Audit_BaoVeDuLieuBenhAn_TT13] WITH (STATE = ON);
 GO
 
--- 3. Giám sát hành vi cố tình tắt hoặc sửa đổi cấu hình Audit ở cấp Server (AUDIT_CHANGE_GROUP)
+-- 3. Giám sát hành vi tắt/sửa Audit (AUDIT_CHANGE_GROUP) VÀ leo thang đặc quyền
+--    SQL ở Kịch bản 3 (thêm thành viên vào server role sysadmin / database role db_owner).
+--    Nếu thiếu 2 group role-change này thì bước "ALTER SERVER ROLE sysadmin ADD MEMBER"
+--    của kẻ tấn công sẽ không sinh Event 33205 và luật V4 không có gì để bắt.
 CREATE SERVER AUDIT SPECIFICATION [Audit_Server_Tamper_Spec]
 FOR SERVER AUDIT [Audit_BaoVeDuLieuBenhAn_TT13]
-    ADD (AUDIT_CHANGE_GROUP)
+    ADD (AUDIT_CHANGE_GROUP),
+    ADD (SERVER_ROLE_MEMBER_CHANGE_GROUP),
+    ADD (DATABASE_ROLE_MEMBER_CHANGE_GROUP)
 WITH (STATE = ON);
 GO
 

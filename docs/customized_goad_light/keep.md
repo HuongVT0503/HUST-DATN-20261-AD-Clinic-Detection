@@ -24,6 +24,14 @@ Link để kiểm chứng:
 
 Chú ý: tài khoản dịch vụ SQL dính Kerberoasting trong GOAD-Light là một service account gắn SPN `MSSQLSvc/...` (trong config là `sql_svc`), chứ không phải `jon.snow`. Vì vậy tôi mô tả bản tùy biến là "kế thừa đúng tài khoản dịch vụ SQL có SPN của GOAD-Light và đổi tên thành SVC_HIS_Database".
 
+### Cách tôi triển khai: dựng mới `clinic.local` từ đầu, không deploy nguyên GOAD rồi xóa
+
+Tôi chọn **viết lại các cấu hình lỗ hổng trọng tâm của GOAD-Light vào một miền `clinic.local` dựng mới từ đầu** (bằng các script trong `iac_goad_light_custom/aws_powershell_bootstrap/`), thay vì deploy nguyên GOAD-Light rồi xóa bớt. Lý do:
+- Trọng tâm đồ án là phần tùy biến y tế, không phải chạy GOAD mặc định. Deploy nguyên GOAD rồi xóa tốn tiền AWS và kéo theo nhiều role (ADCS, trust, IIS...) không dùng mà vẫn phải giải thích.
+- File keep.md + discard.md này là bằng chứng tôi đã đọc và hiểu `config.json`/các role của GOAD-Light để biết cái gì cần giữ (SPN Kerberoast, MSSQL leo quyền, SMB lỏng) và cái gì bỏ.
+
+-> Tôi không deploy GOAD-Light nguyên bản mà tái hiện các misconfiguration cốt lõi của nó trong một miền clinic.local sạch, đối chiếu từng mục ở keep.md/discard.md.
+
 ## 2. Kiến trúc bản tùy biến của tôi (GOAD-Light Clinic Edition)
 
 > Lấy vai trò DC01 và SRV02 của GOAD-Light, gộp về một miền duy nhất `clinic.local`
@@ -40,7 +48,6 @@ Chú ý: tài khoản dịch vụ SQL dính Kerberoasting trong GOAD-Light là m
 | Cơ chế tạo Forest + OU (role `domain_controller`, `ad`) | Giữ, đổi tên | Forest `clinic.local`, 6 OU phòng ban (BacSi, YTa, LeTan, IT_Admin, ServiceAccounts, ClinicComputers) |
 | Miền con `north` trên dc02 + trust cha-con | Bỏ | Chỉ 1 miền `clinic.local`, máy thứ 3 đổi thành WS01 |
 | Tài khoản dịch vụ SQL gắn SPN `MSSQLSvc` (Kerberoasting) | Giữ cơ chế, đổi tên, thêm cờ mã hóa | `SVC_HIS_Database` gắn SPN `MSSQLSvc/SRV02.clinic.local:1433`, bật cả RC4 và AES để test 0x17 vs 0x12 |
-| Tài khoản AS-REP roastable | Giữ cơ chế | `SVC_Backup_Legacy` đặt `DoesNotRequirePreAuth` |
 | SMB share phân quyền lỏng trên srv02 | Giữ cơ chế, đổi nội dung | Share `\\SRV02\BenhAn$` chứa file XML BHYT theo QĐ 130 và 4750 |
 | MSSQL trên srv02 (leo quyền, xp_cmdshell) | Giữ lỗ hổng, thêm dữ liệu | CSDL `HIS_ClinicDB`, bảng `HoSoBenhAn`, cấp quyền cho `SVC_HIS_Database` |
 | ADCS trên dc01 (ESC templates) | Bỏ | Phòng khám dùng chữ ký số công cộng theo TT13, không tự dựng PKI nội bộ |
