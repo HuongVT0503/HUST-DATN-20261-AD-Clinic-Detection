@@ -1,12 +1,16 @@
-title: "[SC3-V1] Phát hiện Thực thi Lệnh Hệ điều hành từ Tiến trình SQL Server (xp_cmdshell)"
+title: "[SC3-V1] Phat hien Thuc thi Lenh He dieu hanh tu Tien trinh SQL Server (xp_cmdshell)"
 id: 11111111-0003-4001-a001-000000000003
 status: stable
 description: >
-  Phiên bản V1 (Out-of-the-Box): Chỉ giám sát ở tầng tiến trình (Sysmon Event ID 1) khi
-  sqlservr.exe gọi cmd.exe hoặc powershell.exe (Kịch bản 3A).
-  Điểm mù: Bỏ lọt hoàn toàn Kịch bản 3B (Tắt SQL Audit) và Kịch bản 3C (Dùng sqlcmd.exe hợp lệ
-  để đọc/xóa trái phép bảng bệnh án điện tử dbo.HoSoBenhAn).
-author: "Vũ Thúy Hường (20225135 - HUST)"
+  Phien ban V1 (Out-of-the-Box, ke thua tu Elastic prebuilt "Execution via MSSQL xp_cmdshell
+  Stored Procedure" va Splunk ESCU "Windows Sqlservr Spawning Shell"): Bat Sysmon Event ID 1
+  khi sqlservr.exe sinh cmd.exe hoac powershell.exe (Kich ban 3, pha xp_cmdshell).
+  Diem mu: Bo lot pha tat SQL Audit (33205) va pha dung sqlcmd hop le doc/xoa trai phep bang
+  dbo.HoSoBenhAn khi khong di qua xp_cmdshell.
+author: "Elastic; Splunk Threat Research Team; tuy bien cho lab phong kham boi Vu Thuy Huong (20225135 - HUST)"
+references:
+  - https://www.elastic.co/guide/en/security/current/execution-via-mssql-xp-cmdshell-stored-procedure.html
+  - https://research.splunk.com/endpoint/d33aac9f-030c-4830-8701-0c2dd75bb6cb/
 date: 2026/11/15
 logsource:
   category: process_creation
@@ -21,7 +25,7 @@ detection:
       - '\pwsh.exe'
   condition: selection
 falsepositives:
-  - "Thấp."
+  - "Tac vu backup/bao tri hop le cua SQL Server goi cmd (hiem o phong kham nho)."
 level: high
 tags:
   - attack.execution

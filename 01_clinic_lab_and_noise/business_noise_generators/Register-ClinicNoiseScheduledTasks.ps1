@@ -24,6 +24,15 @@ Register-ScheduledTask -TaskName "ClinicLab_DoctorShiftChange_Noise" `
                        -Principal $Principal `
                        -Description "Mo phong Y Bac si dang nhap doi ca truc (Event ID 4624/4625)" `
                        -Force | Out-Null
+                       
+
+
+# Task sync PHAI chay tren SRV02 de Event 1644 ghi dung IP nguon = SRV02 (172.31.10.22),
+# nho vay luat V4 moi whitelist duoc theo IP ma khong ho WS01 (noi ke tan cong xuat phat).
+if ($env:COMPUTERNAME -ne "SRV02") {
+    Write-Warning "Task HIS Sync nen dang ky tren SRV02, khong phai $env:COMPUTERNAME. Bo qua task sync o may nay."
+    return
+}
 
 # 2. Task mô phỏng Đồng bộ XML BHYT (QĐ 130/QĐ-BYT) & Tra cứu HIS lẻ.
 # Task này PHẢI chạy dưới tài khoản SVC_HIS_Sync (không phải SYSTEM), để truy vấn LDAP [adsisearcher]

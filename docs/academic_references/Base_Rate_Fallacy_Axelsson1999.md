@@ -1,6 +1,9 @@
 # Base-Rate Fallacy và bài toán báo động giả trong phát hiện xâm nhập
 
-// phần nền lý thuyết cho lập luận "tại sao phải tinh chỉnh luật cho chặt thay vì cứ nới rộng để bắt cho hết". số liệu V2 ở dưới là số minh họa dự kiến, k phải số đo thật. Khi chạy xong replay, đếm được TP/FP/FN thật thì thay vào.
+// phần nền lý thuyết cho lập luận "tại sao phải tinh chỉnh luật cho chặt thay vì cứ nới rộng để bắt cho hết".
+// File này cũng là nơi DUY NHẤT giữ bộ số minh họa (TP/FP/FN giả định). Các file khác khi cần
+// nhắc tới số này thì trỏ về đây, không chép lại, tránh lặp con số y hệt ở nhiều chỗ.
+// Số thật sẽ thay vào sau khi chạy replay và đếm TP/FP/FN.
 
 ## 1. Nguồn gốc và cách trích dẫn
 
@@ -29,28 +32,37 @@ Trong phòng khám ~200 nhân sự, lưu lượng hợp lệ B (bác sĩ đăng 
 Gọi:
 - P(I) là tỉ lệ nền của hành vi tấn công trong tổng log.
 - P(A|I) = Recall: xác suất sinh cảnh báo khi có tấn công.
-- P(A|¬I) = FPR: xác suất báo nhầm trên một sự kiện hợp lệ.
+- P(A|khong I) = FPR: xác suất báo nhầm trên một sự kiện hợp lệ.
 
-Theo Bayes, độ chính xác của cảnh báo đẩy lên màn hình SOC chính là:
+Theo Bayes, độ chính xác của cảnh báo đẩy lên màn hình SOC chính là Precision:
 
-$$P(I \mid A) = \text{Precision} = \frac{P(I)\,P(A\mid I)}{P(I)\,P(A\mid I) + P(\neg I)\,P(A\mid \neg I)} = \frac{TP}{TP + FP}$$
+    Precision = P(I | A)
+              = [ P(I) * P(A|I) ] / [ P(I) * P(A|I) + P(khong I) * P(A|khong I) ]
+              = TP / (TP + FP)
 
-Điểm mấu chốt: vì P(¬I) rất lớn, chỉ cần FPR nhỉnh lên một chút là FP tuyệt đối đã đủ
-nhấn chìm TP, kéo Precision sụp. Đó là lý do nới luật để tăng Recall gần như luôn phải
-trả giá bằng Precision.
+Điểm mấu chốt: vì P(khong I) rất lớn, chỉ cần FPR nhỉnh lên một chút là FP sẽ nhiều hơn TP vô cùng nhiều, khiến Precision rất thấp. Đó là lý do nới luật để tăng Recall gần như luôn phải trả giá bằng Precision.
 
-## 4. Minh họa dự kiến cho luật V2 (CHƯA PHẢI SỐ ĐO THẬT)
+## 4. Minh họa dự kiến cho luật V2 (CHƯA PHẢI SỐ ĐO THẬT, nguồn số dùng chung cho cả repo)
 
 Ví dụ giả định, trên tập 100.000 sự kiện, nếu V2 bắt trúng cả 3 kịch bản (TP=3, FN=0) nhưng báo nhầm FP=5.420 do bắt luôn hoạt động giao ca và đồng bộ XML BHYT:
 
-- FPR xấp xỉ 5.420 / 99.997 ≈ 5,42%
-- Precision = 3 / (3 + 5.420) ≈ 0,055% ≈ 0,06%
+- FPR xấp xỉ 5.420 / 99.997 = khoảng 5,42%
+- Precision = 3 / (3 + 5.420) = khoảng 0,055% (làm tròn 0,06%)
 
 Recall 100% nhưng Precision dưới 0,1%: là Alert Fatigue.
 Mục tiêu của V3 (ngưỡng, cửa sổ trượt) và V4 (whitelist ngữ cảnh) là kéo mẫu số FP xuống để Precision tăng mà Recall tụt không đáng kể. Số thật sẽ điền sau khi replay.
 
-## 5. Đọc thêm 
+Bảng minh họa (illustrative, chưa phải số đo thật) dùng xuyên suốt repo:
+
+| Phiên bản | TP | FN | FP (trên 100.000 log) | Precision | Ghi chú |
+| --- | --- | --- | --- | --- | --- |
+| V2 nới lỏng | 3 | 0 | 5.420 | ~0,06% | bùng nổ FP |
+| V3 ngưỡng | 3 | 0 | 185 | ~1,60% | giảm mạnh |
+| V4 ngữ cảnh | 3 | 0 | 8 | ~27,27% | giảm ~99,85% FP so với V2 |
+
+Các file khác (Precision_Recall..., Clinic_IT_Morning_Review_Playbook, legal docs) khi nhắc con số này thì ghi "xem bảng minh họa ở Base_Rate_Fallacy_Axelsson1999.md", không chép lại số.
+
+## 5. Đọc thêm
 
 - Axelsson, TISSEC 2000 (bản gốc, bắt buộc có trong lit review).
-- R. Sommer and V. Paxson, "Outside the Closed World: On Using Machine Learning for Network Intrusion Detection", IEEE S&P 2010. Bàn sâu vì sao đánh giá IDS thực tế lại khó, base rate và chi phí false positive ở góc vận hành. DOI: 10.1109/SP.2010.25.
-Link: https://www.icir.org/robin/papers/oakland10-ml.pdf
+- R. Sommer and V. Paxson, "Outside the Closed World: On Using Machine Learning for Network Intrusion Detection", IEEE S&P 2010. DOI: 10.1109/SP.2010.25. Link: https://www.icir.org/robin/papers/oakland10-ml.pdf

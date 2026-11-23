@@ -50,15 +50,15 @@ Tài liệu này hướng dẫn từng bước cách khởi tạo 3 máy ảo **
 
 ### Bước 1.1: Thiết lập Security Group (`SG-Clinic-Lab`)
 1. Đăng nhập vào **AWS Management Console**, chọn khu vực **Asia Pacific (Singapore) `ap-southeast-1`**.
-2. Truy cập **EC2 Dashboard** $\rightarrow$ **Security Groups** $\rightarrow$ Nhấn **Create security group**:
+2. Truy cập **EC2 Dashboard** -> **Security Groups** -> Nhấn **Create security group**:
    * **Security group name:** `SG-Clinic-Lab-Internal`
    * **VPC:** Chọn Default VPC của tài khoản.
 3. Cấu hình **Inbound Rules** gồm 2 dòng:
    * **Rule 1 (Quản trị từ xa qua RDP):** Type = `RDP` (Port `3389`, TCP) | Source = `My IP` (Chỉ cho phép địa chỉ IP mạng của bản thân kết nối vào 3 máy ảo).
-   * **Rule 2 (Thông mạng nội bộ giữa 3 máy `DC01`, `SRV02`, `WS01`):** Sau khi tạo xong Security Group, nhấn **Edit inbound rules** $\rightarrow$ Thêm dòng: Type = `All traffic` | Source = Chọn chính ID của `SG-Clinic-Lab-Internal` (ví dụ: `sg-0abc12345...`). *Quy tắc tự tham chiếu (Self-referencing rule) này cho phép 3 máy ảo giao tiếp toàn bộ các cổng AD, DNS, Kerberos, SMB 445, MSSQL 1433 qua địa chỉ Private IP mà không lộ ra Internet.*
+   * **Rule 2 (Thông mạng nội bộ giữa 3 máy `DC01`, `SRV02`, `WS01`):** Sau khi tạo xong Security Group, nhấn **Edit inbound rules** -> Thêm dòng: Type = `All traffic` | Source = Chọn chính ID của `SG-Clinic-Lab-Internal` (ví dụ: `sg-0abc12345...`). *Quy tắc tự tham chiếu (Self-referencing rule) này cho phép 3 máy ảo giao tiếp toàn bộ các cổng AD, DNS, Kerberos, SMB 445, MSSQL 1433 qua địa chỉ Private IP mà không lộ ra Internet.*
 
 ### Bước 1.2: Khởi tạo 3 Instances Windows Server 2022 (`DC01`, `SRV02`, `WS01`)
-1. Vào **EC2 Dashboard** $\rightarrow$ Nhấn **Launch instances**:
+1. Vào **EC2 Dashboard** -> Nhấn **Launch instances**:
    * **Name:** `Clinic-Lab-Node` (Sẽ đổi tên riêng cho từng máy sau khi tạo).
    * **Number of instances:** Nhập **`3`**.
    * **Application and OS Images (AMI):** Chọn **Microsoft Windows Server 2022 Base** (64-bit x86).
@@ -68,12 +68,12 @@ Tài liệu này hướng dẫn từng bước cách khởi tạo 3 máy ảo **
      * **VPC:** Default VPC.
      * **Subnet:** Chọn **cùng 1 Availability Zone / Subnet** (ví dụ: `ap-southeast-1a`) cho cả 3 máy để độ trễ mạng nội bộ thấp nhất.
      * **Auto-assign public IP:** Chọn **`Enable`** (Để có thể RDP trực tiếp vào từng máy mà không tốn phí thuê NAT Gateway).
-     * **Firewall (security groups):** Chọn **Select existing security group** $\rightarrow$ Chọn `SG-Clinic-Lab-Internal`.
+     * **Firewall (security groups):** Chọn **Select existing security group** -> Chọn `SG-Clinic-Lab-Internal`.
    * **Configure storage:** Đặt `35 GiB` (`gp3`) cho mỗi máy.
 2. Nhấn **Launch instance**.
 3. Trong danh sách **Instances**, đặt lại tên hiển thị (cột **Name**) cho 3 máy lần lượt là: **`DC01`**, **`SRV02`**, và **`WS01`**.
 4. Ghi chú lại **Private IPv4 address** của từng máy trên giao diện AWS (Ví dụ minh họa trong tài liệu này: `DC01` = `172.31.10.10`, `SRV02` = `172.31.10.22`, `WS01` = `172.31.10.30`).
-5. Đợi 4 phút sau khi trạng thái máy chuyển sang `Running`, chọn từng máy $\rightarrow$ Nhấn **Connect** $\rightarrow$ Tab **RDP client** $\rightarrow$ Nhấn **Get password** $\rightarrow$ Tải tệp `clinic-lab-key.pem` lên để lấy mật khẩu đăng nhập `Administrator` ban đầu của từng máy.
+5. Đợi 4 phút sau khi trạng thái máy chuyển sang `Running`, chọn từng máy -> Nhấn **Connect** -> Tab **RDP client** -> Nhấn **Get password** -> Tải tệp `clinic-lab-key.pem` lên để lấy mật khẩu đăng nhập `Administrator` ban đầu của từng máy.
 
 ---
 
@@ -200,7 +200,7 @@ Vẫn đứng trên máy trạm **`WS01`**, chạy lần lượt 3 kịch bản 
 1. **Kịch bản 1 (Dò quét AD & SPN):**
    ```powershell
    cd C:\HUST-DATN-20261-AD-Clinic-Detection\02_telemetry_and_scenarios\scenario_01_adsi_slow_recon
-   .\atomic_t1087_002_default.ps1          # Chạy công cụ dò quét mặc định (Bị bắt bởi V1)
+   .\sharphound_setspn_default.ps1          # Chạy công cụ dò quét mặc định (Bị bắt bởi V1)
    .\evasion_adsi_low_and_slow_spn.ps1     # Dò quét chậm qua ADSI tìm SPN & adminCount=1 (Vượt qua V1, sinh Event 1644 trên DC01)
    ```
 2. **Kịch bản 2 (Kerberoasting tài khoản `SVC_HIS_Database`):**
@@ -232,5 +232,5 @@ Vẫn đứng trên máy trạm **`WS01`**, chạy lần lượt 3 kịch bản 
    wevtutil epl Application "C:\sample_srv02_application_sql_33205_15457.evtx"
    ```
 3. Copy cả 3 tệp `.evtx` vừa xuất về thư mục `04_evaluation_and_datasets/evtx_master_datasets/` trên máy tính cá nhân của bạn qua cửa sổ RDP.
-4. **Hủy máy ảo AWS (Quan trọng):** Quay lại giao diện **AWS EC2 Console**, tích chọn cả 3 máy `DC01`, `SRV02`, `WS01` $\rightarrow$ Nhấn **Instance state** $\rightarrow$ **Terminate (delete) instance** để dừng tính phí đám mây.
-5. **Phân tích trên SIEM Offline (WSL2 Docker):** Bật môi trường ELK Stack trên WSL2 theo hướng dẫn tại `README.md` chính của kho mã nguồn để nạp 3 tệp `.evtx` và kiểm thử bộ luật Sigma/KQL từ **V1 $\rightarrow$ V4**.
+4. **Hủy máy ảo AWS (Quan trọng):** Quay lại giao diện **AWS EC2 Console**, tích chọn cả 3 máy `DC01`, `SRV02`, `WS01` -> Nhấn **Instance state** -> **Terminate (delete) instance** để dừng tính phí đám mây.
+5. **Phân tích trên SIEM Offline (WSL2 Docker):** Bật môi trường ELK Stack trên WSL2 theo hướng dẫn tại `README.md` chính của kho mã nguồn để nạp 3 tệp `.evtx` và kiểm thử bộ luật Sigma/KQL từ **V1 -> V4**.

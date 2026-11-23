@@ -32,7 +32,8 @@ $SmbScript = Join-Path $RepoRoot "01_clinic_lab_and_noise\his_mssql_database\Set
 powershell.exe -ExecutionPolicy Bypass -File $SmbScript
 
 # 4. Cài MS SQL Server Express ở chế độ Mixed Mode, bật TCP/IP cổng 1433
-choco install sql-server-express -y --params="'/SECURITYMODE=SQL /SAPWD=Password123! /TCPENABLED=1'"
+# Cai DEFAULT instance MSSQLSERVER tren cong 1433 de khop SPN MSSQLSvc/SRV02.clinic.local:1433.
+choco install sql-server-express -y --params="'/SECURITYMODE=SQL /SAPWD=Password123! /TCPENABLED=1 /INSTANCENAME=MSSQLSERVER'"
 choco install sqlserver-cmdlineutils -y
 New-NetFirewallRule -DisplayName "Allow_MSSQL_1433" -Direction Inbound -Protocol TCP -LocalPort 1433 -Action Allow -ErrorAction SilentlyContinue
 

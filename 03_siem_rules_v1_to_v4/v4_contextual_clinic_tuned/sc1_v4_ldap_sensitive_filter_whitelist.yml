@@ -1,0 +1,59 @@
+title: "[SC1-V4] Phat hien ADSI Recon qua Event 1644 - Whitelist theo DANH TINH + IP NGUON (khong theo noi dung filter)"
+id: 11111111-0001-4004-a004-000000000014
+status: experimental
+description: >
+  Phien ban V4 (toi uu ngu canh phong kham) cho Kich ban 1 (do quet ADSI low-and-slow).
+  Bat Event ID 1644 khi truy van LDAP chua thuoc tinh NHAY CAM thuong dung de do quet
+  dac quyen (servicePrincipalName, adminCount=1, userAccountControl flag khong yeu cau
+  pre-auth, description chua 'Pass'), RỒI loai tru luu luong hop le cua phan mem HIS.
+
+  V4 NEO WHITELIST VAO DANH TINH (SVC_HIS_Sync) + IP NGUON (SRV02), la thu ke tan cong tu may tram le tan (WS01) KHONG the gia mao duoc neu chua chiem duoc SRV02.
+author: "Vu Thuy Huong (20225135 - HUST)"
+references:
+  # Event ID 1644 va cach bat (registry 15 Field Engineering): xem keep.md / PROVENANCE
+  - https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/how-to-find-expensive-inefficient-and-long-running-ldap-queries/ba-p/257859
+  # Nguyen tac Kerckhoffs (whitelist khong duoc dua vao bi mat ke tan cong dieu khien duoc)
+  - https://www.thehacker.recipes/ad/movement/kerberos/kerberoast
+date: 2026/11/20
+logsource:
+  product: windows
+  service: directory-service   # kenh "Directory Service" tren DC01
+detection:
+  selection_1644:
+    EventID: 1644
+  selection_sensitive:
+    # Cac thuoc tinh nhay cam ma hanh vi recon hay loc. Day la dau hieu TAN CONG, giu lai.
+    # LUU Y: tuy cach Winlogbeat phan tich 1644, cac truong nay co the nam trong 'message'
+    # thay vi field rieng. Neu vay, doi sang: message|contains cac chuoi ben duoi.
+    SearchFilter|contains:
+      - 'servicePrincipalName'
+      - 'adminCount=1'
+      - '4194304'          # UF_DONT_REQUIRE_PREAUTH (san AS-REP roast)
+      - 'description=*Pass'
+  filter_his_identity_source:
+    # ===== WHITELIST NEO VAO DANH TINH + IP NGUON (KHONG neo vao noi dung filter) =====
+    # Chi bo qua khi CA HAI dieu kien dung: tai khoan dich vu HIS VA goi tu IP cua SRV02.
+    # Ke tan cong tren WS01 (172.31.10.30) khong thoa man IP = 172.31.10.22 -> van bi bat.
+    SubjectUserName: 'SVC_HIS_Sync'
+    IpAddress: '172.31.10.22'     # SRV02 = may chay phan mem HIS, nguon truy van hop le
+  condition: selection_1644 and selection_sensitive and not filter_his_identity_source
+falsepositives:
+  - "Quan tri vien IT_Admin chay truy van AD hop le tu may quan tri (them IP may do vao filter neu can)."
+level: high
+tags:
+  - attack.discovery
+  - attack.t1087.002
+  - attack.t1018
+# ============================================================================
+# GHI CHU TRIEN KHAI QUAN TRONG (de nhat quan voi ha tang):
+#   Dieu kien IpAddress = 172.31.10.22 (SRV02) CHI DUNG khi bo sinh nhieu
+#   Invoke-HISXmlSync chay TREN SRV02 duoi tai khoan SVC_HIS_Sync. Neu van chay
+#   tren WS01 nhu guide cu thi 1644 se ghi IP = WS01 va whitelist nay sai.
+#   -> Phai dang ky task sync tren SRV02 (sua Register-ClinicNoiseScheduledTasks.ps1
+#   va Muc 7.1 cua AWS_EC2_3VM_DEPLOYMENT_GUIDE.md). Xem phan danh gia kem theo.
+#
+#   Neu Winlogbeat KHONG phan tich duoc truong SubjectUserName tu Event 1644 (1644
+#   khong phai luc nao cung kem danh tinh ro rang), hay neo whitelist theo RIENG
+#   IpAddress = SRV02. Neo theo IP nguon van thoa Kerckhoffs vi ke tan cong tu WS01
+#   khong gia mao duoc IP SRV02 neu chua chiem SRV02 (luc do SC3 se bat).
+# ============================================================================

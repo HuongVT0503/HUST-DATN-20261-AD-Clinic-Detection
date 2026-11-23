@@ -178,7 +178,6 @@ foreach ($row in $ExistingRows) {
 # dễ bị bắt) với "OpSec AES" (xin vé 0x12 để né luật SIEM chỉ lọc 0x17). Phân biệt 0x17/0x12 lấy từ
 # GhostPack Rubeus (github.com/GhostPack/Rubeus) và The Hacker Recipes (thehacker.recipes/ad/movement/kerberos/kerberoast). 
 # Ngữ cảnh y tế: SVC tài khoản phần mềm HIS có SPN MSSQLSvc nên là đối tượng tấn công Kerberoast trong mạng phòng khám.
-# Lệnh -KerberosEncryptionType đã tự set msDS-SupportedEncryptionTypes = 28, không cần Replace lại.
 # SPN đã gắn từ trường SPN của CSV trong vòng lặp ở trên, nên KHÔNG gọi setspn.exe nữa (tránh Duplicate SPN).
 Set-ADUser -Identity "SVC_HIS_Database" -KerberosEncryptionType RC4,AES128,AES256
 Set-ADUser -Identity "SVC_HIS_Database" -Replace @{adminCount=1}

@@ -1,28 +1,37 @@
-title: "[SC1-V1] Phát hiện Dò quét Active Directory qua Chữ ký SharpHound/SetSPN Mặc định"
+title: "[SC1-V1] Phat hien Do quet Active Directory qua Chu ky SharpHound/SetSPN Mac dinh"
 id: 11111111-0001-4001-a001-000000000001
 status: stable
 description: >
-  Phiên bản V1 (Out-of-the-Box): Chỉ bắt Sysmon Event ID 1 khi phát hiện tên tiến trình hoặc
-  tham số dòng lệnh mặc định của công cụ SharpHound.exe, BloodHound hoặc setspn.exe.
-  Điểm mù: Bỏ lọt hoàn toàn Kịch bản 1B (Dò quét chậm qua giao diện .NET ADSI trong bộ nhớ).
-author: "Vũ Thúy Hường (20225135 - HUST)"
+  Phien ban V1 (Out-of-the-Box, ke thua tu SigmaHQ proc_creation_win_hktl_bloodhound_sharphound.yml):
+  Bat Sysmon Event ID 1 khi CommandLine chua chu ky mac dinh cua SharpHound/BloodHound hoac
+  setspn -Q */*.
+  Diem mu: Bo lot hoan toan Kich ban 1B (do quet cham qua .NET ADSI trong bo nho, khong sinh
+  chu ky tool).
+author: "Florian Roth (Nextron Systems); tuy bien cho lab phong kham boi Vu Thuy Huong (20225135 - HUST)"
+references:
+  - https://github.com/SigmaHQ/sigma/blob/master/rules/windows/process_creation/proc_creation_win_hktl_bloodhound_sharphound.yml
+  - https://github.com/SpecterOps/BloodHound
 date: 2026/11/15
 logsource:
   category: process_creation
   product: windows
 detection:
-  selection_cli:
+  selection_setspn:
+    EventID: 1
+    Image|endswith: '\setspn.exe'
+    CommandLine|contains: '-Q'      # bat setspn -Q du co chen -T clinic.local o giua
+  selection_sharphound:
     EventID: 1
     CommandLine|contains:
       - 'SharpHound'
       - '--CollectionMethods'
       - '-c All'
       - 'Invoke-BloodHound'
-      - 'setspn.exe -Q */*'
-  condition: selection_cli
+  condition: selection_setspn or selection_sharphound
 falsepositives:
-  - "Rất thấp (chỉ cảnh báo khi quản trị viên chạy trực tiếp setspn -Q */*)."
+  - "Quan tri vien chay truc tiep setspn -Q */* de kiem tra SPN."
 level: high
 tags:
   - attack.discovery
   - attack.t1087.002
+  - attack.t1069.002

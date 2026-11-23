@@ -1,0 +1,72 @@
+<Sysmon schemaversion="4.90">
+  <!--
+  ============================================================================
+  Tep: 02_telemetry_and_scenarios/telemetry_configs/sysmon_clinic_config.xml
+
+  Muc dich: cau hinh Sysmon toi thieu nhung du cho CA 3 kich ban. Trong tam la
+  Event ID 1 (ProcessCreate) vi day la telemetry V1 (SC1 setspn) va SC3 (sqlservr.exe -> cmd.exe) dua vao. 
+  Them Event ID 3 (NetworkConnect) va 11 (FileCreate) o muc giam de khong lam phinh log tren may lab 8GB RAM.
+
+  Nguon ke thua (xem docs/PROVENANCE_detection_rules.md):
+    - SwiftOnSecurity sysmon-config: https://github.com/SwiftOnSecurity/sysmon-config
+    - Olaf Hartong sysmon-modular:   https://github.com/olafhartong/sysmon-modular
+  Toi cat gon hai cau hinh tren cho lab 3 may, KHONG bê nguyen ban vi ban goc
+  ~1000 dong se sinh qua nhieu Event ID 1 lam loang ground truth cua 3 kich ban.
+
+  Cach nap (da goi trong 02_.._ConfigureAD_Audit.ps1 / 04_.._SetupHIS_SQL_SMB.ps1):
+    Sysmon64.exe -accepteula -i sysmon_clinic_config.xml
+  ============================================================================
+  -->
+  <HashAlgorithms>SHA256</HashAlgorithms>
+  <CheckRevocation>false</CheckRevocation>
+
+  <EventFiltering>
+
+    <!-- ===== Event ID 1: ProcessCreate =====================================
+         BAT TAT CA tien trinh (onmatch="exclude" voi danh sach loai
+         tru rat ngan). Lab can nhin thay het setspn.exe, SharpHound.exe,
+         Rubeus.exe, sqlservr.exe -> cmd.exe/powershell.exe nen khong dung
+         include (de sot). Chi loai vai tien trinh he thong ky so gay nhieu.    -->
+    <RuleGroup name="ProcCreate_include_all_but_noise" groupRelation="or">
+      <ProcessCreate onmatch="exclude">
+        <!-- Loai bot nhieu he thong, KHONG loai cac tien trinh lien quan 3 kich ban -->
+        <Image condition="is">C:\Windows\System32\SearchIndexer.exe</Image>
+        <Image condition="is">C:\Windows\System32\wbem\WmiPrvSE.exe</Image>
+        <Image condition="is">C:\Windows\System32\CompatTelRunner.exe</Image>
+        <Image condition="is">C:\Windows\System32\MpCmdRun.exe</Image>
+        <Image condition="end with">\conhost.exe</Image>
+      </ProcessCreate>
+    </RuleGroup>
+
+    <!-- ===== Event ID 3: NetworkConnect ===================================
+         Chi bat ket noi ra tu cac tien trinh dang quan tam (sqlservr, powershell,
+         cmd, Rubeus) de doi chieu khi phan tich, tranh bat moi ket noi.         -->
+    <RuleGroup name="Net_include_interesting" groupRelation="or">
+      <NetworkConnect onmatch="include">
+        <Image condition="end with">\sqlservr.exe</Image>
+        <Image condition="end with">\powershell.exe</Image>
+        <Image condition="end with">\cmd.exe</Image>
+        <Image condition="end with">\Rubeus.exe</Image>
+      </NetworkConnect>
+    </RuleGroup>
+
+    <!-- ===== Event ID 11: FileCreate ======================================
+         Bat file tao ra o cac thu muc hay bi lam diem rot cong cu / ket qua
+         recon. Du de doi chieu Kich ban 1 va
+         Kich ban 3 (xuat du lieu benh an ra file).                            -->
+    <RuleGroup name="File_include_tool_paths" groupRelation="or">
+      <FileCreate onmatch="include">
+        <TargetFilename condition="begin with">C:\Tools\</TargetFilename>
+        <TargetFilename condition="end with">.zip</TargetFilename>
+        <TargetFilename condition="contains">BenhAn</TargetFilename>
+      </FileCreate>
+    </RuleGroup>
+
+    <!-- Tat bot cac su kien nang khac de nhe RAM: ProcessAccess, ImageLoad... -->
+    <RuleGroup name="drop_heavy" groupRelation="or">
+      <ProcessAccess onmatch="include"></ProcessAccess>
+      <ImageLoad onmatch="include"></ImageLoad>
+    </RuleGroup>
+
+  </EventFiltering>
+</Sysmon>

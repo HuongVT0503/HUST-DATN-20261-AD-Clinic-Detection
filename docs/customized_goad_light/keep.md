@@ -63,6 +63,6 @@ Những thứ tôi **thêm vào** mà GOAD-Light gốc không có (vì gốc là
 
 - GOAD và kiến trúc GOAD-Light: repo và blog Mayfly ở trên.
 - Kerberoasting 0x17 vs 0x12: The Hacker Recipes (https://www.thehacker.recipes/ad/movement/kerberos/kerberoast) và Rubeus (https://github.com/GhostPack/Rubeus).
-- Luật Sigma Kerberoasting gốc mà V1 kế thừa: https://github.com/SigmaHQ/sigma/blob/master/rules/windows/builtin/security/win_security_kerberoasting.yml
+- Luật Sigma Kerberoasting gốc mà V1 kế thừa: win_security_susp_rc4_kerberos.yml (id 496a0e47-0a33-4dca-b009-9e6ca3591f39, Florian Roth): https://github.com/SigmaHQ/sigma/blob/master/rules/windows/builtin/security/win_security_susp_rc4_kerberos.yml
 - Log truy vấn LDAP tốn kém (Event ID 1644): https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/how-to-find-expensive-inefficient-and-long-running-ldap-queries/ba-p/257859
 - SQL Server Audit và Event ID 33205: https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-records
