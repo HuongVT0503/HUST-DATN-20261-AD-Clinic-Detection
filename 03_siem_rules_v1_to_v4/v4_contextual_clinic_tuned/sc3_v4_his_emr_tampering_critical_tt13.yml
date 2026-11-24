@@ -1,0 +1,62 @@
+title: "[SC3-V4] Thao tung CSDL benh an - CHOT CHAN CRITICAL (TT13) + Whitelist doc hop le HIS"
+id: 11111111-0003-4004-a004-000000000025
+status: experimental
+description: >
+  Phien ban V4 (toi uu ngu canh + phap ly) cho Kich ban 3. Hai lop:
+  (1) WHITELIST cho thao tac DOC hop le: 33205 SELECT/INSERT tu SVC_HIS_Sync tai SRV02 theo mau
+      ket xuat XML BHYT -> bo qua de giam FP.
+  (2) CHOT CHAN CRITICAL (KHONG whitelist cho BAT KY AI, ke ca SVC_HIS_Sync hay sa): hanh vi Thong tu 13/2025/TT-BYT cam tuyet doi hoac pha huy luu vet
+        - 33205 doi quyen (them sysadmin / db_owner),
+        - 33205 STATE = OFF (tat SQL Server Audit),
+        - DELETE/DROP/TRUNCATE/UPDATE trai phep tren ho so DA KY SO (DaKySoTT13 = 1),
+        - 15457 bat xp_cmdshell.
+  Nghiep vu XML theo QD130/4750 chi DOC va TRICH XUAT, khong bao gio pha huy/tat audit, nen nhanh (2) khong whitelist cho ai.
+author: "Vu Thuy Huong (20225135 - HUST)"
+references:
+  - https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-records
+  - https://research.splunk.com/endpoint/d33aac9f-030c-4830-8701-0c2dd75bb6cb/
+  - https://www.elastic.co/guide/en/security/current/execution-via-mssql-xp-cmdshell-stored-procedure.html
+  # Thong tu 13/2025/TT-BYT (cam xoa benh an da ky so): xem docs/legal_compliance_2025_2026/
+date: 2026/11/20
+logsource:
+  product: windows
+  service: application   # 33205/15457. Nhanh Sysmon 1 (sqlservr->cmd) gop o KQL .ndjson.
+detection:
+  # ----- luon bao dong Critical, KHONG whitelist -----
+  selection_tamper:
+    EventID: 33205
+    # Khop theo chuoi trong statement/action cua ban ghi 33205:
+    #   - doi vai tro: 'ALTER SERVER ROLE', 'sysadmin', 'db_owner', SERVER_ROLE_MEMBER_CHANGE
+    #   - tat audit:   'ALTER SERVER AUDIT', 'STATE = OFF', 'STATE=OFF'
+    #   - xoa/sua benh an da ky: 'DELETE FROM', 'DROP TABLE', 'TRUNCATE TABLE', 'DaKySoTT13'
+    statement|contains:
+      - 'ALTER SERVER ROLE'
+      - 'STATE = OFF'
+      - 'STATE=OFF'
+      - 'DELETE FROM'
+      - 'DROP TABLE'
+      - 'TRUNCATE TABLE'
+  selection_xpcmd:
+    EventID: 15457
+    # moi lan bat/doi cau hinh xp_cmdshell sinh 15457
+  condition: selection_tamper or selection_xpcmd
+falsepositives:
+  - "Bao tri CSDL CO PHE DUYET (doi chieu lich bao tri). Moi truong hop khac deu phai dieu tra."
+level: critical
+tags:
+  - attack.defense_evasion
+  - attack.t1562.001
+  - attack.t1485
+  - attack.t1059.003
+# ============================================================================
+# GHI CHU TRIEN KHAI:
+#   - Nhanh DOC hop le (SELECT/INSERT cua SVC_HIS_Sync tu SRV02) KHONG nam trong rule nay ma duoc
+#     xu ly o nhanh whitelist ben KQL (.ndjson sc3_v4) de giam FP, con rule Sigma nay chi lo CHOT CHAN.
+#     Ly do tach: thao tac pha huy/tat audit la tuyet doi, khong phu thuoc ngu canh IP; con thao tac
+#     doc thi moi can whitelist IP/danh tinh.
+#   - Vi sao chot chan khong whitelist: nghiep vu BHYT theo QD130/4750 KHONG BAO GIO DELETE/tat audit,
+#     nen ke tan cong dung chinh SVC_HIS_Sync de xoa/tat audit van bi bat (phong thu dung ban chat
+#     nghiep vu, khong dua vao bi mat -> t/m Kerckhoffs).
+#   - Field 'statement' tuy cach Winlogbeat phan tich 33205 co the nam trong 'message'. Neu vay doi
+#     selection_tamper sang: message|contains cac chuoi tren (xem .ndjson da lam san).
+# ============================================================================

@@ -1,0 +1,37 @@
+# ============================================================================
+# [SC1-V3] NgUONG tan suat truy van LDAP 1644 (Sigma Correlation).
+# Y tuong: do quet (ke ca low-and-slow) sinh NHIEU 1644 tu 1 nguon trong cua so thoi gian;
+# HIS hop le chi sinh 1644 le te. Dat nguong de tach.
+#
+# PROVENANCE (phan nguong/cua so truot co chuan):
+#   - Sigma Correlation spec (event_count, group-by, timespan): https://sigmahq.io/docs/meta/correlations.html
+#   - Tuong duong trong Elastic la "Threshold rule type":
+#       https://www.elastic.co/guide/en/security/current/rules-ui-create.html#create-threshold-rule
+#   - Base-rate: vi sao phai dat nguong thay vi bat het -> Axelsson 1999 (doi.org/10.1145/357830.357849)
+#
+# LUU Y SO LIEU: nguong 50/phut DUOI DAY LA PLACEHOLDER. Phai do baseline 1644 that cua HIS roi dat nguong = max(baseline hop le) + bien an toan. 
+#       PHAI Ghi so duoc chon + ly do.
+#
+# CACH DUNG voi sigma-cli: nap KEM file base sc1_v2 (correlation tham chieu rule theo id).
+#   sigma convert -t <backend> sc1_v2_ldap_1644_all_queries.yml sc1_v3_ldap_1644_threshold_50_per_min.yml
+# ============================================================================
+title: "[SC1-V3] Do quet LDAP qua nguong tan suat 1644 (placeholder 50/phut/nguon)"
+id: 11111111-0001-4003-a003-000000000021
+status: experimental
+description: >
+  Bat khi so Event 1644 tu cung mot nguon vuot nguong trong 1 phut. Giam FP so voi V2 vi nhieu
+  HIS hop le thua nguong. Van con bat nham mot so tac vu ra soat dinh ky cua IT (xu ly o V4).
+author: "Vu Thuy Huong (20225135 - HUST)"
+correlation:
+  type: event_count
+  rules:
+    - 11111111-0001-4002-a002-000000000011   # sc1_v2_ldap_1644_all_queries
+  group-by:
+    - IpAddress        # neu 1644 khong co IpAddress/SubjectUserName dang field, xem muc 8.1 playbook
+  timespan: 1m
+  condition:
+    gte: 50            # <-- PLACEHOLDER: tune tu baseline
+level: high
+tags:
+  - attack.discovery
+  - attack.t1087.002

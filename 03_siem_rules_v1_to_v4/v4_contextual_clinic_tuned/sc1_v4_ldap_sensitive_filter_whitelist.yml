@@ -7,7 +7,7 @@ description: >
   dac quyen (servicePrincipalName, adminCount=1, userAccountControl flag khong yeu cau
   pre-auth, description chua 'Pass'), RỒI loai tru luu luong hop le cua phan mem HIS.
 
-  V4 NEO WHITELIST VAO DANH TINH (SVC_HIS_Sync) + IP NGUON (SRV02), la thu ke tan cong tu may tram le tan (WS01) KHONG the gia mao duoc neu chua chiem duoc SRV02.
+  V4 NEO WHITELIST VAO DANH TINH (SVC_HIS_Sync) + IP NGUON (SRV02)-> ke tan cong tu may tram le tan (WS01) KHONG the gia mao duoc neu chua chiem duoc SRV02.
 author: "Vu Thuy Huong (20225135 - HUST)"
 references:
   # Event ID 1644 va cach bat (registry 15 Field Engineering): xem keep.md / PROVENANCE
@@ -45,15 +45,20 @@ tags:
   - attack.t1087.002
   - attack.t1018
 # ============================================================================
-# GHI CHU TRIEN KHAI QUAN TRONG (de nhat quan voi ha tang):
-#   Dieu kien IpAddress = 172.31.10.22 (SRV02) CHI DUNG khi bo sinh nhieu
-#   Invoke-HISXmlSync chay TREN SRV02 duoi tai khoan SVC_HIS_Sync. Neu van chay
-#   tren WS01 nhu guide cu thi 1644 se ghi IP = WS01 va whitelist nay sai.
-#   -> Phai dang ky task sync tren SRV02 (sua Register-ClinicNoiseScheduledTasks.ps1
-#   va Muc 7.1 cua AWS_EC2_3VM_DEPLOYMENT_GUIDE.md). Xem phan danh gia kem theo.
+# KHOI GHI CHU IP (neu dung lai lab HOAC tune cho phong kham khac):
+#   IpAddress = 172.31.10.22 GIA DINH SRV02 duoc GHIM dung Private IP nay luc launch EC2.
+#   Cach ghim: AWS_EC2_3VM_DEPLOYMENT_GUIDE.md muc 1.2 (dat "Primary IP" trong Advanced network
+#   configuration khi launch tung may). Neu de AWS cap IP ngau nhien, PHAI sua IpAddress o tren
+#   + dong source.ip trong kql_queries/elastic_kibana_saved_queries.ndjson (SC1_V4) cho khop IP that.
 #
-#   Neu Winlogbeat KHONG phan tich duoc truong SubjectUserName tu Event 1644 (1644
-#   khong phai luc nao cung kem danh tinh ro rang), hay neo whitelist theo RIENG
-#   IpAddress = SRV02. Neo theo IP nguon van thoa Kerckhoffs vi ke tan cong tu WS01
-#   khong gia mao duoc IP SRV02 neu chua chiem SRV02 (luc do SC3 se bat).
+#   PHONG KHAM KHAC (huong dan tune cho IT): thay IpAddress = IP tinh may chu HIS,
+#   SubjectUserName = tai khoan dich vu dong bo BHYT. Chay baseline 7 ngay de xac dinh
+#   dung 2 gia tri nay (xem Clinic_IT_Morning_Review_Playbook.md, Buoc 0).
+#
+# DIEU KIEN DUNG WHITELIST: bo sinh nhieu Invoke-HISXmlSync PHAI chay TREN SRV02 duoi SVC_HIS_Sync
+#   (dang ky qua Register-ClinicNoiseScheduledTasks.ps1 tren SRV02). Neu chay tren WS01 thi 1644 se
+#   ghi IP = WS01 va whitelist nay sai.
+#
+#   Neu Winlogbeat KHONG phan tich duoc SubjectUserName tu 1644, neo whitelist CHI theo IpAddress =
+#   SRV02 (xem muc 8.1 playbook). Neo IP van thoa Kerckhoffs.
 # ============================================================================

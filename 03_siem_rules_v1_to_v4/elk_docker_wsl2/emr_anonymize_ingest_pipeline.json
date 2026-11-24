@@ -1,0 +1,68 @@
+{
+  "description": "emr-anonymize: che (redact) CCCD/BHYT/ten benh nhan trong log truoc khi luu index. Tuan thu Luat BVDLCN 91/2025/QH15 & ND 356/2025/ND-CP. Giu nguyen cac truong ECS phuc vu phat hien.",
+  "_comment_cach_dung": [
+    "1) Tao pipeline:  PUT _ingest/pipeline/emr-anonymize  voi noi dung file nay (bo cac khoa _comment_*).",
+    "   Hoac dung Kibana: Stack Management -> Ingest Pipelines -> Import.",
+    "2) Tro Winlogbeat toi pipeline (winlogbeat.yml):",
+    "     output.elasticsearch:",
+    "       hosts: ['http://localhost:9200']",
+    "       pipeline: 'emr-anonymize'",
+    "   -> Day la cach 'goi an danh hoa trong winlogbeat config' (winlogbeat KHONG chay Python; no goi ingest pipeline).",
+    "3) Pipeline nay REDACT (thay bang token), KHONG hash. Neu can gia danh hoa co the doi chieu (hash+salt)",
+    "   thi dung anonymize_sensitive_emr_logs.py --evtx truoc khi nap (danh doi: mat anh xa ECS)."
+  ],
+  "processors": [
+    {
+      "gsub": {
+        "field": "message",
+        "pattern": "\\b0\\d{11}\\b",
+        "replacement": "<CCCD_REDACTED>",
+        "ignore_missing": true,
+        "description": "Che so CCCD 12 chu so trong message"
+      }
+    },
+    {
+      "gsub": {
+        "field": "message",
+        "pattern": "\\b[A-Z]{2}\\d{13}\\b",
+        "replacement": "<BHYT_REDACTED>",
+        "ignore_missing": true,
+        "description": "Che ma the BHYT (2 chu + 13 so) trong message"
+      }
+    },
+    {
+      "gsub": {
+        "field": "message",
+        "pattern": "(Nguyễn Văn An|Trần Thị Bình|Lê Hoàng Cường|Phạm Minh Dũng|Hoàng Thu Hà|Vũ Quốc Khánh|Đặng Ngọc Lan|Bùi Xuân Mạnh|NGUYEN VAN BENH NHAN)\\s*\\(\\d+\\)",
+        "replacement": "<PATIENT_REDACTED>",
+        "ignore_missing": true,
+        "description": "Che ho ten benh nhan mau trong message"
+      }
+    },
+    {
+      "gsub": {
+        "field": "winlog.event_data.statement",
+        "pattern": "\\b0\\d{11}\\b",
+        "replacement": "<CCCD_REDACTED>",
+        "ignore_missing": true,
+        "description": "Che CCCD trong truong statement cua 33205 neu Winlogbeat tach rieng"
+      }
+    },
+    {
+      "gsub": {
+        "field": "winlog.event_data.statement",
+        "pattern": "\\b[A-Z]{2}\\d{13}\\b",
+        "replacement": "<BHYT_REDACTED>",
+        "ignore_missing": true
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "field": "error.anonymize",
+        "value": "{{ _ingest.on_failure_message }}"
+      }
+    }
+  ]
+}

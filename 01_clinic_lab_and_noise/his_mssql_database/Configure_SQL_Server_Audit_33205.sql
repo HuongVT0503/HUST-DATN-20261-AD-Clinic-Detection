@@ -7,6 +7,8 @@ Mô tả: Kích hoạt cơ chế ghi vết kiểm toán SQL Server Audit đẩy 
 ================================================================================
 */
 
+/--cảnh báo SQL 2016 SP1+
+
 USE [master];
 GO
 

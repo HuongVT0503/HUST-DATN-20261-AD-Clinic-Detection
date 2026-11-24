@@ -1,244 +1,226 @@
-# Hướng dẫn Triển khai Môi trường Lab Phòng khám 3 Máy ảo (`DC01`, `SRV02`, `WS01`) từ đầu trên AWS EC2
+# Hướng dẫn dựng lab GOAD-Light Clinic Edition từ con số 0 trên AWS EC2
 
-> **Tài liệu Hướng dẫn (Reproducibility Playbook)**  
-> Thuộc Đồ án Tốt nghiệp: *Phát triển giải pháp phát hiện tấn công lẩn tránh nhằm vào CSDL bệnh án trong môi trường Active Directory tại các phòng khám vừa và nhỏ*
-
----
-
-## 0. Hai Phương thức Triển khai Linh hoạt
-
-Kho mã nguồn này hỗ trợ **2 phương thức triển khai** tùy theo cấu hình phần cứng của người dùng:
-1. **Cách 1 - Triển khai trên AWS EC2 bằng PowerShell Bootstrap (Khuyên dùng cho máy tính cá nhân ~8GB RAM):** Khởi tạo 3 máy Windows Server 2022 trắng trên AWS Console và chạy tuần tự 6 kịch bản trong thư mục `aws_powershell_bootstrap/` theo hướng dẫn chi tiết từ Mục 1 đến Mục 8 bên dưới.
-2. **Cách 2 - Triển khai tự động hoàn toàn qua Vagrant & Ansible (Dành cho máy trạm/server vật lý từ 16GB-32GB RAM):**
-   ```bash
-   cd 01_clinic_lab_and_noise/iac_goad_light_custom
-   vagrant up
-   ansible-playbook -i inventory provisioning_clinic.yml
-   ```
+> Tài liệu tái lập (reproducibility) cho đồ án: *Phát triển giải pháp phát hiện tấn công lẩn tránh nhằm vào CSDL bệnh án trong môi trường Active Directory tại các phòng khám vừa và nhỏ.*
+>
+> Đây là tài liệu triển khai duy nhất. Bản điều hướng 10 bước: `QUICKSTART.md` (gốc repo).
+> Pha phân tích offline: `04_evaluation_and_datasets/REPLAY_RUNBOOK.md`.
 
 ---
 
-## 0b. Yêu cầu bắt buộc trước khi dựng
+## 0. Cảnh báo an toàn (đọc trước)
 
-Những điểm dưới đây nếu làm sai thì lab chạy nhưng thiếu dữ liệu, rất khó phát hiện:
+- Lab này **cố tình cấu hình sai** (tài khoản dịch vụ bị Kerberoast, SMB share lỏng, đường leo quyền SQL). Chỉ chạy trong VPC riêng; không mở cổng nào ra Internet ngoài RDP giới hạn IP hợp lệ.
+- Dữ liệu bệnh nhân giả lập, mật khẩu (`P@ssw0rd123!`, `Password123!`, `Clinic@2026!`) là mật khẩu lab dùng một lần.
+- Có thể terminate cả 3 EC2 sau khi xuất xong `.evtx` để tiết kiệm chi phí.
 
-1. **SQL Server phải cài ở chế độ Mixed Mode (`/SECURITYMODE=SQL`).** Script `04_SRV02_Stage2` đã cài sẵn như vậy. 
-   Lý do: bộ sinh nhiễu HIS đăng nhập SQL bằng tài khoản `SVC_HIS_Sync` qua SQL authentication (`sqlcmd -U/-P`), mà SQL login chỉ tạo được khi SQL ở Mixed Mode. Nếu cài Windows-only thì `Init_HIS_EMR_Schema.sql` không tạo được login `SVC_HIS_Sync` và nhiễu HIS sẽ không sinh ra.
-2. **Thứ tự dựng cố định:** DC01 lên domain trước (script 01 rồi 02), SAU ĐÓ SRV02 và WS01 mới join được (script 03/04 và 05/06). Join trước khi DC lên sẽ fail vì chưa phân giải được `clinic.local`.
-3. **Phải điền `sysmon_clinic_config.xml` trước khi chạy thật.** thiếu nó thì không có Event ID 1 (ProcessCreate) cho cả 3 kịch bản. Các script bootstrap sẽ cảnh báo và tạm cài Sysmon mặc định.
-4. **Chạy 6 script bootstrap đúng máy đúng thứ tự** (xem bảng ở Mục 6), không chạy nhầm script của DC trên SRV.
+## 0b. Hai phương thức triển khai
+1. **AWS EC2 + PowerShell bootstrap (khuyên dùng cho máy cá nhân ~8GB RAM):** 3 máy Windows Server 2022 trắng, chạy tuần tự 6 script trong `aws_powershell_bootstrap/`. Toàn bộ guide này.
+2. **Vagrant + Ansible (máy ≥16GB RAM):** `vagrant up && ansible-playbook -i inventory provisioning_clinic.yml`. Đường phụ, không phải luồng chính.
 
----
-
-## 1. Tổng quan Kiến trúc & Chi phí Thực nghiệm trên AWS EC2
-
-Tài liệu này hướng dẫn từng bước cách khởi tạo 3 máy ảo **Windows Server 2022 Base** trắng trên nền tảng **Amazon Web Services (AWS EC2)** và sử dụng bộ kịch bản PowerShell đóng gói sẵn trong kho mã nguồn này để tự động cấu hình thành hạ tầng **`GOAD-Light Clinic Edition`** hoàn chỉnh.
-
-### Bảng phân bổ 3 nút mạng (3-Node Topology)
-
-| Tên Máy (Hostname) | Vai trò trong Phòng khám | Cấu hình AWS EC2 khuyên dùng | Địa chỉ IP Nội bộ (Gợi ý trong VPC) | Các Event ID trọng tâm thu thập |
-| :--- | :--- | :--- | :--- | :--- |
-| **`DC01`** | **Domain Controller** (`clinic.local`): Quản lý 6 OUs, 5 Groups, 200 định danh nhân sự y tế & tài khoản dịch vụ `SVC_HIS_Database`, `SVC_HIS_Sync`. | `t3.medium` (2 vCPU, 4GB RAM, 30GB EBS) | `172.31.10.10` | **1644** (LDAP/ADSI Recon), **4769** (Kerberoasting `0x17`/`0x12`), **4624/4625** (Giao ca trực) |
-| **`SRV02`** | **HIS Database & File Server** (`SRV02.clinic.local`): Chạy MS SQL Server (`HIS_ClinicDB`) và SMB Share (`\\SRV02\BenhAn$`) lưu hồ sơ XML BHYT. | `t3.large` hoặc `t3.medium` (2 vCPU, 4-8GB RAM, 35GB EBS) | `172.31.10.22` | **33205** (SQL Server Audit), **15457** (`xp_cmdshell`), **5140/5145** (SMB Share), **Sysmon ID 1** |
-| **`WS01`** | **Clinic Workstation** (`WS01.clinic.local`): Máy trạm lễ tân/phòng khám dùng chung giữa các ca trực; nơi phát sinh lưu lượng nền (Business Noise) và điểm xuất phát (Patient Zero) của 3 kịch bản tấn công. | `t3.medium` (2 vCPU, 4GB RAM, 30GB EBS) | `172.31.10.30` | **Sysmon ID 1**, Nguồn phát sinh lưu lượng sang `DC01` và `SRV02` |
-
-> **Chiến lược Tiết kiệm Chi phí (Ephemeral Cloud):** Tổng chi phí vận hành đồng thời cả 3 máy ảo trên AWS Region `ap-southeast-1` (Singapore) theo hình thức On-Demand chỉ khoảng **~$0.21 - $0.28 USD/giờ (~6.000đ VNĐ/giờ)**. Toàn bộ quá trình khởi tạo, chạy kịch bản sinh nhiễu, thực thi 3 kịch bản tấn công và trích xuất tệp `.evtx` chỉ mất khoảng **2 - 4 giờ** (tổng chi phí dưới **$1.20 USD**). Sau khi tải các tệp `.evtx` về máy cá nhân, người dùng **Terminate (Hủy)** toàn bộ 3 máy ảo trên AWS để đưa chi phí duy trì về **$0**.
+## 0c. Bắt buộc trước khi dựng
+1. **SQL phải Mixed Mode** (`/SECURITYMODE=SQL`): script 04 đã đặt sẵn. Thiếu thì không tạo được SQL Login `SVC_HIS_Sync`.
+2. **Thứ tự cố định:** DC01 lên trước (01→02), rồi SRV02/WS01 mới join được (03/04, 05/06).
+3. **`sysmon_clinic_config.xml` và `Enable-LDAP-1644-Diagnostics.reg` không rỗng.
+4. Chạy 6 script đúng máy đúng thứ tự (các mục 3–5).
 
 ---
 
-## 2. Giai đoạn 1: Khởi tạo 3 Máy ảo Windows trắng và Cấu hình Mạng trên AWS Console
+## 1. Tài khoản AWS và mạng
 
-### Bước 1.1: Thiết lập Security Group (`SG-Clinic-Lab`)
-1. Đăng nhập vào **AWS Management Console**, chọn khu vực **Asia Pacific (Singapore) `ap-southeast-1`**.
-2. Truy cập **EC2 Dashboard** -> **Security Groups** -> Nhấn **Create security group**:
-   * **Security group name:** `SG-Clinic-Lab-Internal`
-   * **VPC:** Chọn Default VPC của tài khoản.
-3. Cấu hình **Inbound Rules** gồm 2 dòng:
-   * **Rule 1 (Quản trị từ xa qua RDP):** Type = `RDP` (Port `3389`, TCP) | Source = `My IP` (Chỉ cho phép địa chỉ IP mạng của bản thân kết nối vào 3 máy ảo).
-   * **Rule 2 (Thông mạng nội bộ giữa 3 máy `DC01`, `SRV02`, `WS01`):** Sau khi tạo xong Security Group, nhấn **Edit inbound rules** -> Thêm dòng: Type = `All traffic` | Source = Chọn chính ID của `SG-Clinic-Lab-Internal` (ví dụ: `sg-0abc12345...`). *Quy tắc tự tham chiếu (Self-referencing rule) này cho phép 3 máy ảo giao tiếp toàn bộ các cổng AD, DNS, Kerberos, SMB 445, MSSQL 1433 qua địa chỉ Private IP mà không lộ ra Internet.*
+### 1.1. Security Group `SG-Clinic-Lab-Internal`
+- Region `ap-southeast-1` (Singapore).
+- Inbound: `RDP 3389/TCP` ← **My IP**; rồi thêm `All traffic` ← **chính Security Group này** (self-referencing, cho 3 máy nói chuyện đủ cổng AD/DNS/Kerberos/SMB445/MSSQL1433 nội bộ).
 
-### Bước 1.2: Khởi tạo 3 Instances Windows Server 2022 (`DC01`, `SRV02`, `WS01`)
-1. Vào **EC2 Dashboard** -> Nhấn **Launch instances**:
-   * **Name:** `Clinic-Lab-Node` (Sẽ đổi tên riêng cho từng máy sau khi tạo).
-   * **Number of instances:** Nhập **`3`**.
-   * **Application and OS Images (AMI):** Chọn **Microsoft Windows Server 2022 Base** (64-bit x86).
-   * **Instance type:** Chọn `t3.medium` (2 vCPU, 4GB RAM).
-   * **Key pair (login):** Tạo mới một Key Pair tên `clinic-lab-key.pem` và tải về máy để giải mã mật khẩu Administrator.
-   * **Network settings:** Nhấn **Edit**:
-     * **VPC:** Default VPC.
-     * **Subnet:** Chọn **cùng 1 Availability Zone / Subnet** (ví dụ: `ap-southeast-1a`) cho cả 3 máy để độ trễ mạng nội bộ thấp nhất.
-     * **Auto-assign public IP:** Chọn **`Enable`** (Để có thể RDP trực tiếp vào từng máy mà không tốn phí thuê NAT Gateway).
-     * **Firewall (security groups):** Chọn **Select existing security group** -> Chọn `SG-Clinic-Lab-Internal`.
-   * **Configure storage:** Đặt `35 GiB` (`gp3`) cho mỗi máy.
-2. Nhấn **Launch instance**.
-3. Trong danh sách **Instances**, đặt lại tên hiển thị (cột **Name**) cho 3 máy lần lượt là: **`DC01`**, **`SRV02`**, và **`WS01`**.
-4. Ghi chú lại **Private IPv4 address** của từng máy trên giao diện AWS (Ví dụ minh họa trong tài liệu này: `DC01` = `172.31.10.10`, `SRV02` = `172.31.10.22`, `WS01` = `172.31.10.30`).
-5. Đợi 4 phút sau khi trạng thái máy chuyển sang `Running`, chọn từng máy -> Nhấn **Connect** -> Tab **RDP client** -> Nhấn **Get password** -> Tải tệp `clinic-lab-key.pem` lên để lấy mật khẩu đăng nhập `Administrator` ban đầu của từng máy.
+### 1.2. Ghim Private IP tĩnh (fix lỗ hổng tái lập)
+
+Bộ luật V4 và KQL **hardcode SRV02 = `172.31.10.22`** để whitelist. Nếu để AWS cấp IP ngẫu nhiên, whitelist sẽ sai và số FP của V4 vô nghĩa. Chọn một trong hai:
+
+**Cách A (khuyên dùng): ghim Primary IP lúc launch.** Launch từng máy một, ở *Network settings → Advanced network configuration* điền **Primary IP** trong dải subnet (vd subnet `172.31.0.0/20`):
+
+| Máy | Primary private IP |
+|---|---|
+| DC01 | `172.31.10.10` |
+| SRV02 | `172.31.10.22` |
+| WS01 | `172.31.10.30` |
+
+> IP phải thuộc đúng subnet đã chọn và chưa bị dùng. Nếu subnet của lab khác `172.31.0.0/20`, chọn 3 IP hợp lệ trong subnet đó rồi **sửa** mọi chỗ `172.31.10.22` (xem §1.3 và các file luật V4/KQL).
+
+**Cách B — IP ngẫu nhiên rồi sửa luật.** Ghi lại 3 IP được cấp, sửa IP SRV02 trong
+`v4_contextual_clinic_tuned/sc1_v4_...yml`, `sc2_v4_...yml`, và `kql_queries/elastic_kibana_saved_queries.ndjson`.
+
+### 1.3. Hướng dẫn tune IP cho phòng khám (dành cho IT triển khai thật)
+Whitelist V4 neo theo **IP tĩnh máy chủ HIS** + **tài khoản dịch vụ đồng bộ BHYT**. Khi áp cho phòng khám thật: chạy baseline 7 ngày (xem `Clinic_IT_Morning_Review_Playbook.md` Bước 0), xác định đúng 2 giá trị đó, điền vào trường `IpAddress`/`SubjectUserName`/`source.ip` trong 3 file luật V4 + file KQL.
+
+### 1.4. Launch 3 máy
+- AMI **Windows Server 2022 Base** (64-bit); `t3.medium` (2vCPU/4GB); `35 GiB gp3`; cùng 1 subnet/AZ.
+- Key pair `clinic-lab-key.pem`. Auto-assign public IP = Enable.
+- Name tag: `DC01`, `SRV02`, `WS01`. Sau `Running` ~4 phút: Connect → Get password (nạp `.pem`).
 
 ---
 
-## 3. Giai đoạn 2: Tải Kho Mã Nguồn Đồ Án về cả 3 Máy ảo
-
-Mở ứng dụng **Remote Desktop Connection (`mstsc.exe`)** trên máy tính cá nhân, kết nối vào cả 3 máy ảo `DC01`, `SRV02`, `WS01` bằng Public IP của chúng.
-
-Trên cả 3 máy ảo, mở **Windows PowerShell (Run as Administrator)** và chạy đoạn lệnh sau để chuẩn bị thư mục và tải kho mã nguồn của đồ án về ổ `C:\`:
-
+## 2. Đưa mã nguồn lên cả 3 máy
+RDP vào từng máy, PowerShell (Admin):
 ```powershell
-# Chạy trên cả 3 máy (DC01, SRV02, WS01) trong cửa sổ PowerShell Administrator:
 Set-ExecutionPolicy Bypass -Scope Process -Force
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
-
-# Tải kho mã nguồn về C:\HUST-DATN-20261-AD-Clinic-Detection (Hoặc copy trực tiếp thư mục qua cửa sổ RDP)
-New-Item -Path "C:\Tools" -ItemType Directory -Force
+New-Item -Path "C:\Tools" -ItemType Directory -Force | Out-Null
 Add-MpPreference -ExclusionPath "C:\Tools"
 Add-MpPreference -ExclusionPath "C:\HUST-DATN-20261-AD-Clinic-Detection"
 ```
-*(Mẹo: có thể `git clone` repo này trên máy cá nhân, nén thành file `.zip` rồi **Ctrl+C / Ctrl+V** trực tiếp qua cửa sổ Remote Desktop vào ổ `C:\` của cả 3 máy ảo).*
+Đưa repo vào `C:\HUST-DATN-20261-AD-Clinic-Detection` (git clone hoặc Ctrl+C/V qua RDP).
 
 ---
 
-## 4. Giai đoạn 3: Cấu hình Máy 1 - `DC01` (Domain Controller `clinic.local`)
-
-### Bước 4.1: Cài đặt ADDS Forest & Nâng cấp Domain Controller (Stage 1)
-Trên máy **`DC01`**, mở PowerShell (Administrator) và chạy kịch bản `01_DC01_Stage1_InstallForest.ps1`:
-
+## 3. DC01 — Domain Controller
 ```powershell
 cd C:\HUST-DATN-20261-AD-Clinic-Detection\01_clinic_lab_and_noise\iac_goad_light_custom\aws_powershell_bootstrap
-.\01_DC01_Stage1_InstallForest.ps1
+.\01_DC01_Stage1_InstallForest.ps1      # tạo forest clinic.local, tự reboot -> RDP lại CLINIC\Administrator
+.\02_DC01_Stage2_ConfigureAD_Audit.ps1  # 200 user + telemetry 1644/4769/4624/4625 + Sysmon
 ```
-- **Nội dung thực thi:** Đổi Hostname thành `DC01`, cài đặt feature `AD-Domain-Services`, khởi tạo Forest mới tên **`clinic.local`** (NetBIOS: `CLINIC`) với mật khẩu quản trị miền thống nhất là `P@ssw0rd123!`.
-- **Lưu ý:** Sau khi chạy xong (~3 phút), máy `DC01` sẽ tự động khởi động lại (Reboot). Hãy đợi khoảng 3-4 phút rồi kết nối RDP lại vào `DC01` với tài khoản:
-  * **Username:** `CLINIC\Administrator`
-  * **Password:** *(Mật khẩu Administrator của EC2 hoặc `P@ssw0rd123!`)*
+Script 02 tạo: 6 OU, 5 group, và **200 định danh** = 2 service account + **3 IT_Admin (IT_Admin01–03)**
++ 60 BS + 100 YT + 35 LT. (Lưu ý: 3 IT_Admin, không phải 2.)
 
-### Bước 4.2: Khởi tạo 200 Nhân sự Y tế, `SVC_HIS_Database`, Audit `1644`/`4769` và Sysmon (Stage 2)
-Sau khi đăng nhập lại vào **`DC01`**, mở PowerShell (Administrator) và chạy kịch bản `02_DC01_Stage2_ConfigureAD_Audit.ps1`:
-
+Kiểm tra:
 ```powershell
-cd C:\HUST-DATN-20261-AD-Clinic-Detection\01_clinic_lab_and_noise\iac_goad_light_custom\aws_powershell_bootstrap
-.\02_DC01_Stage2_ConfigureAD_Audit.ps1
+(Get-ADUser -Filter *).Count     # > 200
+Get-ADUser SVC_HIS_Database -Properties ServicePrincipalNames, KerberosEncryptionType, adminCount
+dcdiag /q ; Get-Service Sysmon64
 ```
-- **Nội dung thực thi:**
-  1. Tạo 6 OUs (`BacSi`, `YTa`, `LeTan`, `IT_Admin`, `ServiceAccounts`, `ClinicComputers`) và 5 nhóm RBAC (`GRP_BacSi`, `GRP_YTa`, `GRP_LeTan`, `GRP_IT_Admin`, `GRP_HIS_Services`).
-  2. Gọi `Import-ClinicADUsers.ps1` nạp 200 định danh nhân sự từ tệp CSV (`BS_BacSi001..060`, `YT_YTa001..100`, `LT_LeTan001..035`, `IT_Admin01..02`).
-  3. Khởi tạo 2 tài khoản dịch vụ trọng tâm **`SVC_HIS_Database`** (gắn SPN `MSSQLSvc/SRV02.clinic.local:1433`, cho phép cả mã hóa `RC4 0x17` và `AES256 0x12`, là đích Kerberoast của Kịch bản 2) và **`SVC_HIS_Sync`** (tài khoản đồng bộ XML BHYT, chỉ đọc).
-  4. Áp dụng cấu hình Registry `Enable-LDAP-1644-Diagnostics.reg` (bật `15 Field Engineering = 5` và hạ ngưỡng `Expensive/Inefficient Search Results Threshold = 1` để bắt mọi truy vấn ADSI) và bật `auditpol` cho Event ID `4769`, `4624`, `4625`.
-  5. Tải và cài đặt `Sysmon64.exe` với cấu hình `sysmon_clinic_config.xml`.
-- **Kiểm tra hoàn tất trên `DC01`:** Chạy lệnh `(Get-ADUser -Filter *).Count` thấy trả về `> 200` tài khoản và `Get-ADUser SVC_HIS_Database -Properties ServicePrincipalNames` hiển thị đúng SPN `MSSQLSvc/SRV02.clinic.local:1433`.
 
 ---
 
-## 5. Giai đoạn 4: Cấu hình Máy 2 - `SRV02` (Máy chủ Bệnh án HIS SQL & SMB Share)
-
-### Bước 5.1: Trỏ DNS về `DC01` và Gia nhập Miền `clinic.local` (Stage 1)
-Trên máy **`SRV02`**, mở PowerShell (Administrator) và chạy kịch bản `03_SRV02_Stage1_JoinDomain.ps1` (nhớ truyền địa chỉ **Private IP của máy `DC01`** vào tham số `-DC01PrivateIP`):
-
+## 4. SRV02 — máy chủ HIS (SQL + SMB)
 ```powershell
 cd C:\HUST-DATN-20261-AD-Clinic-Detection\01_clinic_lab_and_noise\iac_goad_light_custom\aws_powershell_bootstrap
-.\03_SRV02_Stage1_JoinDomain.ps1 -DC01PrivateIP "172.31.10.10"
+.\03_SRV02_Stage1_JoinDomain.ps1 -DC01PrivateIP "172.31.10.10"   # join, tự reboot
+.\04_SRV02_Stage2_SetupHIS_SQL_SMB.ps1                            # SMB + SQL + Audit + Sysmon
 ```
-- **Lưu ý:** Máy `SRV02` sẽ đổi tên thành `SRV02.clinic.local`, gia nhập miền và **tự động Reboot**. Sau 2 phút, kết nối RDP lại vào `SRV02` bằng tài khoản miền:
-  * **Username:** `CLINIC\Administrator` (hoặc `CLINIC\IT_Admin01` với mật khẩu `Clinic@2026!`)
 
-### Bước 5.2: Cài đặt MS SQL Server, Khởi tạo CSDL `HIS_ClinicDB`, SQL Audit `33205` và SMB Share `BenhAn$` (Stage 2)
-Sau khi đăng nhập lại vào **`SRV02`**, mở PowerShell (Administrator) và chạy kịch bản `04_SRV02_Stage2_SetupHIS_SQL_SMB.ps1`:
-
+### 4.3. KIỂM TRA BẮT BUỘC trên SRV02
 ```powershell
-cd C:\HUST-DATN-20261-AD-Clinic-Detection\01_clinic_lab_and_noise\iac_goad_light_custom\aws_powershell_bootstrap
-.\04_SRV02_Stage2_SetupHIS_SQL_SMB.ps1
+# (a) Default instance trên 1433?
+sqlcmd -S localhost -E -Q "SELECT SERVERPROPERTY('InstanceName') AS Inst, SERVERPROPERTY('Edition') AS Edition, @@VERSION AS Ver;"
+#   Inst = NULL. Nếu = 'SQLEXPRESS' -> SPN sai cổng, cài lại với /INSTANCENAME=MSSQLSERVER.
+
+# (b) Edition đủ mới cho Database Audit Specification?
+#   Mọi edition hỗ trợ SERVER audit; DATABASE audit chỉ chạy từ SQL Server 2016 SP1 trở lên
+#   Express 2019/2022 (choco cài) là đủ. Nếu tạo Database Audit Spec báo:
+#       Msg 33075: Granular auditing is not available in this edition of SQL Server
+#   -> ĐỔI sang SQL Server Developer Edition (miễn phí lab) rồi nạp lại schema + audit
+
+# (c) Audit đang bật?
+sqlcmd -S localhost -E -Q "SELECT name,is_state_enabled FROM sys.server_audits;"
+sqlcmd -S localhost -E -Q "SELECT name,is_state_enabled FROM sys.server_audit_specifications;"
+sqlcmd -S localhost -E -d HIS_ClinicDB -Q "SELECT name,is_state_enabled FROM sys.database_audit_specifications;"
+#   Cả 3 phải is_state_enabled = 1.
+
+# (d) 50 bệnh án mẫu? (e) Firewall + share?
+sqlcmd -S localhost -E -d HIS_ClinicDB -Q "SELECT COUNT(*) FROM dbo.HoSoBenhAn;"
+Get-NetFirewallRule -DisplayName "Allow_MSSQL_1433"; Get-SmbShare -Name "BenhAn$"
 ```
-- **Nội dung thực thi:**
-  1. Thêm `CLINIC\SVC_HIS_Database` và `CLINIC\SVC_HIS_Sync` vào nhóm Local Administrators của `SRV02`.
-  2. Gọi `Setup_SMB_BenhAn_Share.ps1` tạo thư mục `C:\HoSoBenhAn_XML`, chia sẻ qua SMB ẩn **`\\SRV02\BenhAn$`**, tạo 20 tệp XML BHYT mẫu chuẩn Quyết định 130/QĐ-BYT, và gắn SACL để ghi nhận **Event ID 5140 / 5145**.
-  3. Tự động tải và cài đặt **MS SQL Server** ở chế độ **Mixed Mode** (`/SECURITYMODE=SQL`), bật sẵn giao thức TCP/IP cổng `1433`, mở Windows Firewall cho cổng `1433`. **Bắt buộc Mixed Mode**, nếu không thì không tạo được SQL Login `SVC_HIS_Sync` và bộ sinh nhiễu HIS (`sqlcmd -U/-P`) sẽ không chạy.
-  4. Thực thi `Init_HIS_EMR_Schema.sql` và `Configure_SQL_Server_Audit_33205.sql`: tạo CSDL **`HIS_ClinicDB`** (bảng `HoSoBenhAn`), cấp quyền tối thiểu cho **`CLINIC\SVC_HIS_Database`** (`db_datareader`/`db_datawriter` nhưng **DENY DELETE** bệnh án đã ký số theo TT13) và SQL Login **`SVC_HIS_Sync`** (chỉ đọc), rồi kích hoạt **`SERVER AUDIT [Audit_BaoVeDuLieuBenhAn_TT13] TO APPLICATION_LOG`** (bắt cả hành vi thêm thành viên `sysadmin`) để ghi **Event ID 33205** và **15457**.
-  5. Cài đặt **Sysmon** với cấu hình `sysmon_clinic_config.xml`.
+> Nếu (c) rỗng/0 → **dừng và sửa**: toàn bộ telemetry 33205 của Kịch bản 3 phụ thuộc vào đây
 
 ---
 
-## 6. Giai đoạn 5: Cấu hình Máy 3 - `WS01` (Máy trạm Phòng khám & Thực thi Kịch bản)
-
-### Bước 6.1: Trỏ DNS về `DC01` và Gia nhập Miền `clinic.local` (Stage 1)
-Trên máy **`WS01`**, mở PowerShell (Administrator) và chạy kịch bản `05_WS01_Stage1_JoinDomain.ps1` (truyền địa chỉ Private IP của `DC01`):
-
+## 5. WS01 — máy trạm
 ```powershell
 cd C:\HUST-DATN-20261-AD-Clinic-Detection\01_clinic_lab_and_noise\iac_goad_light_custom\aws_powershell_bootstrap
 .\05_WS01_Stage1_JoinDomain.ps1 -DC01PrivateIP "172.31.10.10"
-```
-- Đợi máy `WS01` khởi động lại và đăng nhập RDP bằng tài khoản `CLINIC\Administrator` (hoặc `CLINIC\BS_BacSi001` / `Clinic@2026!`).
-
-### Bước 6.2: Cấp quyền Giao ca và Cài đặt Công cụ trên `WS01` (Stage 2)
-Trên máy **`WS01`**, mở PowerShell (Administrator) và chạy kịch bản `06_WS01_Stage2_InitWorkstation.ps1`:
-
-```powershell
-cd C:\HUST-DATN-20261-AD-Clinic-Detection\01_clinic_lab_and_noise\iac_goad_light_custom\aws_powershell_bootstrap
 .\06_WS01_Stage2_InitWorkstation.ps1
 ```
-- **Nội dung thực thi:** Cho phép các nhóm `GRP_BacSi`, `GRP_YTa`, `GRP_LeTan` đăng nhập trên `WS01`; cài đặt `sqlcmd.exe` và `Sysmon` trên `WS01`.
 
 ---
 
-## 7. Giai đoạn 6: Kích hoạt Bộ Sinh Nhiễu Y tế & Thực thi 3 Kịch bản Tấn công Lẩn tránh
-
-Khi cả 3 máy `DC01`, `SRV02`, `WS01` đã sẵn sàng, đứng trên máy trạm **`WS01`** thực hiện tuần tự 2 luồng sau để tạo ra tập dữ liệu nhật ký chuẩn (Master Dataset):
-
-### Bước 7.1: Bật Bộ Sinh Nhiễu Nghiệp vụ Phòng khám (Business Noise Generators)
-Noise giao ca chạy trên **WS01** (máy trạm dùng chung), còn noise đồng bộ HIS chạy trên **SRV02** để log 1644 mang IP nguồn SRV02, khớp whitelist V4. Nếu chạy chung trên WS01 thì 1644 sẽ mang IP của WS01, mà WS01 là nơi kẻ tấn công xuất phát nên không whitelist theo IP đó được.
-
-**Trên máy `WS01`** (giao ca trực, sinh 4624/4625):
+## 6. Sinh nhiễu (chạy TRƯỚC khi tấn công; để song song ~30–60 phút)
+Quy tắc đặt máy (whitelist V4 dựa vào IP nguồn):
+- Nhiễu **giao ca** (4624/4625) → **WS01**.
+- Nhiễu **đồng bộ HIS** (1644/33205/5140) → **SRV02**, dưới `SVC_HIS_Sync` (để 1644 mang IP SRV02).
 ```powershell
-cd C:\HUST-DATN-20261-AD-Clinic-Detection\01_clinic_lab_and_noise\business_noise_generators
-.\Invoke-DoctorShiftChange_4624_4625.ps1
+# WS01:
+cd ...\business_noise_generators ; .\Register-ClinicNoiseScheduledTasks.ps1
+# SRV02:
+cd ...\business_noise_generators ; .\Register-ClinicNoiseScheduledTasks.ps1   # tự nhận SRV02 -> task sync dưới SVC_HIS_Sync
 ```
+> Task sync lỗi khởi động → cấp *Log on as a batch job* cho `SVC_HIS_Sync` (`secpol.msc`).
 
-**Trên máy `SRV02`** (đồng bộ HIS, sinh 1644/33205/5140 với IP nguồn = SRV02):
-```powershell
-cd C:\HUST-DATN-20261-AD-Clinic-Detection\01_clinic_lab_and_noise\business_noise_generators
-.\Invoke-HISXmlSync_QD130_QD4750.ps1 -TargetServer "SRV02.clinic.local"
-```
-> Để log 1644/33205 đúng là của `SVC_HIS_Sync` (không phải Administrator), nên đăng ký task này bằng `Register-ClinicNoiseScheduledTasks.ps1` chạy trên SRV02 (task đã cấu hình chạy dưới `CLINIC\SVC_HIS_Sync`), thay vì chạy tay qua RDP bằng Administrator.
-
-### Bước 7.2: Thực thi 3 Kịch bản Tấn công Mặc định & Tấn công Lẩn tránh (Ghi lại Timestamp)
-Vẫn đứng trên máy trạm **`WS01`**, chạy lần lượt 3 kịch bản kiểm thử trong thư mục `02_telemetry_and_scenarios/`:
-
-1. **Kịch bản 1 (Dò quét AD & SPN):**
-   ```powershell
-   cd C:\HUST-DATN-20261-AD-Clinic-Detection\02_telemetry_and_scenarios\scenario_01_adsi_slow_recon
-   .\sharphound_setspn_default.ps1          # Chạy công cụ dò quét mặc định (Bị bắt bởi V1)
-   .\evasion_adsi_low_and_slow_spn.ps1     # Dò quét chậm qua ADSI tìm SPN & adminCount=1 (Vượt qua V1, sinh Event 1644 trên DC01)
-   ```
-2. **Kịch bản 2 (Kerberoasting tài khoản `SVC_HIS_Database`):**
-   ```powershell
-   cd C:\HUST-DATN-20261-AD-Clinic-Detection\02_telemetry_and_scenarios\scenario_02_kerberoast_opsec
-   .\attack_rc4_downgrade_0x17.ps1         # Yêu cầu vé TGS hạ cấp mã hóa RC4 0x17 (Bị bắt bởi V1)
-   .\evasion_aes256_opsec_0x12.ps1         # Yêu cầu vé TGS mã hóa AES256 0x12 (Vượt qua V1, sinh Event 4769 0x12 trên DC01)
-   ```   
-3. **Kịch bản 3 (Lạm dụng `SVC_HIS_Database` tấn công CSDL Bệnh án `HIS_ClinicDB` trên `SRV02`):**
-   > Lưu ý xác thực: `SVC_HIS_Database` là **Windows login**, không thể dùng SQL auth `-U/-P` với tên miền. Phải chạy sqlcmd bằng **integrated auth (`-E`) trong ngữ cảnh của chính `SVC_HIS_Database`**, dùng mật khẩu lấy được sau khi Kerberoast ở Kịch bản 2 (ví dụ mở một shell chạy as `SVC_HIS_Database` bằng `runas /netonly`, rồi chạy các lệnh dưới). Vì tài khoản này chỉ có `db_datareader/writer` và bị DENY DELETE, bước đầu của kịch bản là leo thang `sysadmin` thì các lệnh sau mới chạy được (và chính bước leo thang + tắt audit là cái luật V4 bắt qua Event 33205).
-   > **Tiền đề:** mở một phiên `sqlcmd` đã ở quyền `sysadmin`. Trong lab, quyền sysadmin đạt được theo hướng single-user mode, xem `scenario_03/README.md` và nguồn Microsoft Learn "Connect to SQL Server When System Administrators Are Locked Out". 
-   > **Chạy ĐÚNG THỨ TỰ P3 -> (P2+P4) -> P5.** Đọc/xóa phải chạy khi Audit còn ON mới sinh 33205; tắt Audit là bước CUỐI. Nếu tắt Audit trước thì DELETE không để lại 33205.
-   ```powershell
-   cd C:\HUST-DATN-20261-AD-Clinic-Detection\02_telemetry_and_scenarios\scenario_03_his_db_tampering
-   sqlcmd -S SRV02.clinic.local -E -i .\enable_xp_cmdshell_15457.sql      | Tee-Object -FilePath C:\ground_truth_sql.log -Append         # P3: 15457 + Sysmon 1
-   sqlcmd -S SRV02.clinic.local -E -i .\abuse_svc_his_read_delete_emr.sql | Tee-Object -FilePath C:\ground_truth_sql.log -Append         # P2 persistence + P4 doc/xoa: 33205
-   sqlcmd -S SRV02.clinic.local -E -i .\disable_sql_audit_33205.sql       | Tee-Object -FilePath C:\ground_truth_sql.log -Append         # P5 CUOI CUNG: 33205 STATE=OFF 
-   ```
 ---
 
-## 8. Giai đoạn 7: Trích xuất Tệp `.evtx`, Ẩn danh hóa và Tắt Hạ tầng AWS
+## 7. Chạy 3 kịch bản (ghi ground truth)
+### 7.1 Kịch bản 1 (WS01)
+```powershell
+cd ...\scenario_01_adsi_slow_recon
+.\sharphound_setspn_default.ps1      # 1A (V1 bắt) - Sysmon 1 trên WS01
+.\evasion_adsi_low_and_slow_spn.ps1  # 1B (V1 bỏ lọt) - 1644 trên DC01
+```
+### 7.2 Kịch bản 2 (WS01)
+```powershell
+cd ...\scenario_02_kerberoast_opsec
+.\attack_rc4_downgrade_0x17.ps1      # 2A - cần Rubeus.exe trong C:\Tools
+.\evasion_aes256_opsec_0x12.ps1      # 2B - .NET native
+```
+### 7.3 Kịch bản 3 (leo quyền P2 trên SRV02, rồi P3→P4→P5)
+`SVC_HIS_Database` là Windows login → dùng `runas /netonly`, không `-U/-P`.
+```powershell
+# P2 trên SRV02 (quyền local-admin của SVC_HIS_Database):
+net stop MSSQLSERVER ; net start MSSQLSERVER /m
+sqlcmd -S localhost -E -Q "ALTER SERVER ROLE sysadmin ADD MEMBER [CLINIC\SVC_HIS_Database];"
+net stop MSSQLSERVER ; net start MSSQLSERVER
+# P3 -> P4 -> P5 (đọc/xóa khi audit CÒN ON; tắt audit CUỐI):
+cd ...\scenario_03_his_db_tampering
+sqlcmd -S SRV02.clinic.local -E -i .\enable_xp_cmdshell_15457.sql       | Tee-Object C:\ground_truth_sql.log -Append
+sqlcmd -S SRV02.clinic.local -E -i .\abuse_svc_his_read_delete_emr.sql  | Tee-Object C:\ground_truth_sql.log -Append
+sqlcmd -S SRV02.clinic.local -E -i .\disable_sql_audit_33205.sql        | Tee-Object C:\ground_truth_sql.log -Append
+```
+Ground truth: `C:\ground_truth.csv` (WS01, SC1/SC2) + `C:\ground_truth_sql.log` (SRV02, SC3).
 
-1. **Trên máy `DC01`**, mở PowerShell (Administrator) để xuất 2 tệp nhật ký cốt lõi:
-   ```powershell
-   wevtutil epl Security "C:\sample_dc01_security_4769_4624.evtx"
-   wevtutil epl "Directory Service" "C:\sample_dc01_directory_service_1644.evtx"
-   ```
-2. **Trên máy `SRV02`**, mở PowerShell (Administrator) để xuất tệp nhật ký ứng dụng chứa SQL Audit:
-   ```powershell
-   wevtutil epl Application "C:\sample_srv02_application_sql_33205_15457.evtx"
-   ```
-3. Copy cả 3 tệp `.evtx` vừa xuất về thư mục `04_evaluation_and_datasets/evtx_master_datasets/` trên máy tính cá nhân của bạn qua cửa sổ RDP.
-# Copy ca 2 file ground truth ve cung .evtx de gan nhan
-# Tren WS01: C:\ground_truth.csv   (nhan SC1/SC2)
-# Tren SRV02: C:\ground_truth_sql.log (nhan SC3)
-4. **Hủy máy ảo AWS (Quan trọng):** Quay lại giao diện **AWS EC2 Console**, tích chọn cả 3 máy `DC01`, `SRV02`, `WS01` -> Nhấn **Instance state** -> **Terminate (delete) instance** để dừng tính phí đám mây.
-5. **Phân tích trên SIEM Offline (WSL2 Docker):** Bật môi trường ELK Stack trên WSL2 theo hướng dẫn tại `README.md` chính của kho mã nguồn để nạp 3 tệp `.evtx` và kiểm thử bộ luật Sigma/KQL từ **V1 -> V4**.
+---
+
+## 8. Xuất `.evtx`
+```powershell
+# DC01
+New-Item C:\evtx -ItemType Directory -Force | Out-Null
+wevtutil epl Security                              "C:\evtx\dc01_security_4769_4624_4625.evtx"
+wevtutil epl "Directory Service"                   "C:\evtx\dc01_directory_service_1644.evtx"
+wevtutil epl Microsoft-Windows-Sysmon/Operational  "C:\evtx\dc01_sysmon.evtx"
+# SRV02
+New-Item C:\evtx -ItemType Directory -Force | Out-Null
+wevtutil epl Application                           "C:\evtx\srv02_application_33205_15457.evtx"
+wevtutil epl Security                              "C:\evtx\srv02_security_5140_5145.evtx"
+wevtutil epl Microsoft-Windows-Sysmon/Operational  "C:\evtx\srv02_sysmon_sqlservr.evtx"
+# WS01
+New-Item C:\evtx -ItemType Directory -Force | Out-Null
+wevtutil epl Security                              "C:\evtx\ws01_security.evtx"
+wevtutil epl Microsoft-Windows-Sysmon/Operational  "C:\evtx\ws01_sysmon_setspn.evtx"
+```
+Copy tất cả `.evtx` + 2 file ground truth về `04_evaluation_and_datasets/evtx_master_datasets/`.
+
+### 8.1. Kiểm tra 1 lần: Event 1644 có trường danh tính không?
+```powershell
+Get-WinEvent -LogName "Directory Service" -FilterXPath "*[System[(EventID=1644)]]" -MaxEvents 1 | Format-List *
+```
+Có `SubjectUserName`/`User` → whitelist SC1-V4 theo danh tính + IP. Chỉ có IP → whitelist theo IP SRV02.
+
+---
+
+## 9. Hủy hạ tầng
+EC2 → chọn 3 máy → Instance state → **Terminate**.
+
+---
+
+## 10. Phân tích offline
+Xem `04_evaluation_and_datasets/REPLAY_RUNBOOK.md` (bật ELK, nạp `.evtx`, chạy V1→V4, gán nhãn, tính số, vẽ).
+
+---
+
+## 11. Bảng Event ID → log nào → kịch bản nào (để không xuất thiếu)
+| Event ID | Kênh log | Máy | Dùng cho |
+|---|---|---|---|
+| 1 (ProcessCreate) | Microsoft-Windows-Sysmon/Operational | WS01, SRV02 | SC1-1A (setspn), SC3-P3 (sqlservr→cmd) |
+| 1644 | Directory Service | DC01 | SC1-1B (ADSI low-and-slow) |
+| 4624/4625 | Security | DC01, WS01 | Nhiễu giao ca |
+| 4769 | Security | DC01 | SC2 (0x17 vs 0x12) |
+| 5140/5145 | Security | SRV02 | Truy cập SMB BenhAn$ |
+| 15457 | Application | SRV02 | SC3-P3 (xp_cmdshell) |
+| 33205 | Application | SRV02 | SC3 (role-change, SELECT/DELETE, tắt audit) |
+
+Dòng nào không có `.evtx` tương ứng ở §8 → xuất thiếu

@@ -1,6 +1,6 @@
 title: "[SC2-V1] Phat hien Kerberoasting Mac dinh qua Ma hoa RC4-HMAC (0x17)"
 id: 11111111-0002-4001-a001-000000000002
-status: stable
+status: stable # ban goc la status: test -> nang lvl do boi canh HIS
 description: >
   Phien ban V1 (Out-of-the-Box, ke thua tu SigmaHQ win_security_susp_rc4_kerberos.yml -
   "Suspicious Kerberos RC4 Ticket Encryption", id goc 496a0e47-0a33-4dca-b009-9e6ca3591f39):
@@ -30,7 +30,7 @@ detection:
   condition: selection and not reduction
 falsepositives:
   - "Tai khoan dich vu tren he thong ke thua cu chi ho tro RC4 (vi du NetApp)."
-level: high
+level: high  #level: medium -> nang lvl do boi canh HIS
 tags:
   - attack.credential_access
   - attack.t1558.003

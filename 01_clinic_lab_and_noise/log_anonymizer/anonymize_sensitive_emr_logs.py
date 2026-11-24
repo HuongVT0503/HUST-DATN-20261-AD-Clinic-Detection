@@ -1,23 +1,36 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Tệp: 01_clinic_lab_and_noise/log_anonymizer/anonymize_sensitive_emr_logs.py
-Mô tả: Công cụ ẩn danh hóa dữ liệu cá nhân nhạy cảm (Số CCCD, Mã thẻ BHYT, Họ tên bệnh nhân)
-       trong nhật ký kiểm toán (JSON/CSV/XML) theo quy định tại Luật Bảo vệ dữ liệu cá nhân
-       số 91/2025/QH15 và Nghị định 356/2025/NĐ-CP (hiệu lực từ 01/01/2026).
-"""
+Tep: 01_clinic_lab_and_noise/log_anonymizer/anonymize_sensitive_emr_logs.py
+Mo ta: An danh hoa du lieu ca nhan nhay cam (So CCCD, Ma the BHYT, Ho ten benh nhan) trong nhat ky kiem toan theo Luat BVDLCN 91/2025/QH15 va Nghi dinh 356/2025/ND-CP (hieu luc 01/01/2026).
 
+HAI CHE DO:
+  1) Text/JSON/CSV:   -i input.json -o output.json
+  2) .evtx truc tiep:        --evtx input.evtx -o output_sanitized.jsonl
+     -> doc tung ban ghi .evtx, trich XML, an danh hoa, ghi ra JSONL (1 ban ghi/dong).
+
+LUU Y:
+  - Che do --evtx tao ra DU LIEU DA SACH de CHIA SE/LUU TRU (vd phat hanh dataset mau). Nhung neu nap JSONL nay bang Filebeat thi SE MAT anh xa truong ECS cua Winlogbeat (winlog.event_data.*),
+    lam hong cac KQL dang dung. => Chi dung --evtx cho muc dich chia se dataset sach.
+  - De "an danh TRONG pipeline ma VAN giu truong ECS" (khuyen dung cho SIEM): dung ES INGEST PIPELINE
+    'emr-anonymize' (file 03_siem_rules_v1_to_v4/elk_docker_wsl2/emr_anonymize_ingest_pipeline.json),
+    tro winlogbeat output.elasticsearch.pipeline toi no. Winlogbeat KHONG chay duoc script Python nay,
+    nen viec "goi .py trong winlogbeat config" la KHONG the; thay vao do winlogbeat goi ingest pipeline.
+
+Phu thuoc che do --evtx: pip install python-evtx  (hoac co 'evtx_dump' trong PATH).
+"""
 import argparse
 import hashlib
+import json
 import re
+import sys
 from pathlib import Path
 
 SALT_SECRET = "HUST_DATN_20261_PDPL_91_2025_QH15_SALT"
 
-# Biểu thức chính quy nhận diện dữ liệu nhạy cảm của bệnh nhân trong log
-# Số CCCD: 12 chữ số, bắt đầu bằng 0 (chuẩn CCCD Việt Nam).
+# So CCCD: 12 chu so bat dau bang 0 (chuan CCCD Viet Nam).
 REGEX_CCCD = re.compile(r"\b(0\d{11})\b")
-# Mã thẻ BHYT: 2 chữ cái + 13 chữ số = đúng 15 ký tự (khớp dữ liệu sinh ra ở Init_HIS_EMR_Schema.sql và Setup_SMB_BenhAn_Share.ps1). Nếu đổi định dạng mã thẻ thì sửa luôn ở đây.
+# Ma the BHYT: 2 chu cai + 13 chu so = 15 ky tu (khop Init_HIS_EMR_Schema.sql).
 REGEX_BHYT = re.compile(r"\b([A-Z]{2}\d{13})\b")
 REGEX_PATIENT_NAME = re.compile(
     r"(Nguyễn Văn An|Trần Thị Bình|Lê Hoàng Cường|Phạm Minh Dũng|Hoàng Thu Hà|"
@@ -27,13 +40,11 @@ REGEX_PATIENT_NAME = re.compile(
 
 
 def sha256_pseudonymize(raw_value: str, prefix: str) -> str:
-    """Băm một chiều SHA-256 kèm Salt, giữ lại 10 ký tự đầu để phục vụ đối sánh tương quan."""
     digest = hashlib.sha256(f"{SALT_SECRET}:{raw_value}".encode("utf-8")).hexdigest()[:10]
     return f"<{prefix}_ANON_{digest.upper()}>"
 
 
 def anonymize_text_content(content: str) -> str:
-    """Thay thế toàn bộ Số CCCD, Mã thẻ BHYT và Họ tên bệnh nhân trong chuỗi log."""
     content = REGEX_CCCD.sub(lambda m: sha256_pseudonymize(m.group(1), "CCCD"), content)
     content = REGEX_BHYT.sub(lambda m: sha256_pseudonymize(m.group(1), "BHYT"), content)
     content = REGEX_PATIENT_NAME.sub(lambda m: sha256_pseudonymize(m.group(0), "PATIENT"), content)
@@ -42,32 +53,48 @@ def anonymize_text_content(content: str) -> str:
 
 def process_log_file(input_path: Path, output_path: Path) -> None:
     raw_text = input_path.read_text(encoding="utf-8", errors="ignore")
-    sanitized_text = anonymize_text_content(raw_text)
-    output_path.write_text(sanitized_text, encoding="utf-8")
-    print(f"[+] Đã ẩn danh hóa tệp log theo Luật BVDLCN 91/2025/QH15: {output_path}")
+    output_path.write_text(anonymize_text_content(raw_text), encoding="utf-8")
+    print(f"[+] Da an danh hoa (text) theo Luat BVDLCN 91/2025/QH15: {output_path}")
+
+
+def process_evtx(input_path: Path, output_path: Path) -> None:
+    """Doc .evtx -> an danh hoa XML tung ban ghi -> ghi JSONL {record_xml: <sanitized>}."""
+    try:
+        from Evtx.Evtx import Evtx  # package: python-evtx
+    except ImportError:
+        sys.exit("[!] Thieu python-evtx. Chay: pip install python-evtx  (hoac dung 'evtx_dump' rieng).")
+    n = 0
+    with Evtx(str(input_path)) as log, output_path.open("w", encoding="utf-8") as out:
+        for record in log.records():
+            xml = record.xml()
+            out.write(json.dumps({"record_xml": anonymize_text_content(xml)}, ensure_ascii=False) + "\n")
+            n += 1
+    print(f"[+] Da an danh hoa {n} ban ghi .evtx -> {output_path} (JSONL).")
+    print("    Luu y: JSONL nay DA MAT anh xa ECS cua Winlogbeat - chi dung de CHIA SE dataset sach.")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Ẩn danh hóa dữ liệu bệnh án nhạy cảm trong nhật ký trước khi nạp SIEM."
-    )
-    parser.add_argument("-i", "--input", help="Đường dẫn tệp log đầu vào (JSON/CSV/TXT)")
-    parser.add_argument("-o", "--output", help="Đường dẫn tệp log đầu ra sau khi ẩn danh hóa")
-    args = parser.parse_args()
+    ap = argparse.ArgumentParser(description="An danh hoa du lieu benh an nhay cam truoc khi nap/chia se.")
+    ap.add_argument("-i", "--input", help="Tep log text/JSON/CSV dau vao")
+    ap.add_argument("--evtx", help="Tep .evtx dau vao (che do moi)")
+    ap.add_argument("-o", "--output", help="Tep dau ra")
+    args = ap.parse_args()
 
-    if args.input and args.output:
+    if args.evtx:
+        if not args.output:
+            sys.exit("[!] Che do --evtx can -o <output.jsonl>.")
+        process_evtx(Path(args.evtx), Path(args.output))
+    elif args.input and args.output:
         process_log_file(Path(args.input), Path(args.output))
     else:
-        # Chạy kiểm thử tự động (Self-test demo) khi không truyền tham số
-        sample_sql_audit_log = (
-            "EventID=33205 | action_id=SL | class_type=U | server_principal_name=CLINIC\\SVC_HIS_Database | "
+        # Self-test demo
+        sample = (
+            "EventID=33205 | server_principal_name=CLINIC\\SVC_HIS_Database | "
             "statement=SELECT MaBenhAn, SoCCCD='001204100001', MaTheBHYT='DN4010120000001', "
             "HoTen=N'Nguyễn Văn An (1)' FROM HIS_ClinicDB.dbo.HoSoBenhAn;"
         )
-        print("[*] Bản ghi SQL Audit 33205 gốc:")
-        print("   ", sample_sql_audit_log)
-        print("[*] Bản ghi sau khi ẩn danh hóa (Tuân thủ Luật BVDLCN 91/2025/QH15 & NĐ 356/2025/NĐ-CP):")
-        print("   ", anonymize_text_content(sample_sql_audit_log))
+        print("[*] Goc:   ", sample)
+        print("[*] An danh:", anonymize_text_content(sample))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,32 @@
+title: "[SC1-V2] Phat hien moi truy van LDAP ton kem (Event 1644) - BAN NOI LONG de bat ADSI low-and-slow"
+id: 11111111-0001-4002-a002-000000000011
+status: experimental
+description: >
+  Phien ban V2 (NOI LONG) cho Kich ban 1. Muc tieu: bat duoc ca pha lan tranh 1B (do quet ADSI
+  low-and-slow) ma V1 bo lot, bang cach tu bo phu thuoc chu ky cong cu va BAT MOI Event 1644.
+  Day la buoc "co tinh lam rong de khong bo lot" nham CHUNG MINH bung no canh bao gia (base-rate):
+  moi truy van LDAP ton kem hop le cua phan mem HIS (SVC_HIS_Sync tra cuu phan quyen bac si) deu
+  bi bat nham. So FP that se dem sau khi replay (xem Base_Rate_Fallacy_Axelsson1999.md).
+# PROVENANCE:
+#   - KHONG phai 1 rule cong bo san. Day la ban "widen" co chu dich cua chinh do an,
+#     mo rong tu nen telemetry 1644 (Microsoft - Event 1644 Field Engineering).
+#   - Co so ly thuyet vi sao noi long => FP tang rat nhieu: Axelsson 1999 (base-rate fallacy).
+author: "Vu Thuy Huong (20225135 - HUST)"
+references:
+  - https://techcommunity.microsoft.com/t5/core-infrastructure-and-security/how-to-find-expensive-inefficient-and-long-running-ldap-queries/ba-p/257859
+  - https://doi.org/10.1145/357830.357849   # Axelsson, base-rate fallacy
+date: 2026/11/16
+logsource:
+  product: windows
+  service: directory-service
+detection:
+  selection_1644:
+    EventID: 1644
+  condition: selection_1644
+falsepositives:
+  - "TAT CA truy van LDAP hop le cua phan mem HIS (SVC_HIS_Sync) va quan tri vien - day CHINH LA van de V2 tao ra."
+level: medium
+tags:
+  - attack.discovery
+  - attack.t1087.002
+  - attack.t1018

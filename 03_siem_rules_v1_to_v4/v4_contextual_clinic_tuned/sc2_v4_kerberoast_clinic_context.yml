@@ -1,0 +1,54 @@
+title: "[SC2-V4] Kerberoast tai khoan dich vu HIS - Whitelist theo DANH TINH + IP NGUON (ngu canh phong kham)"
+id: 11111111-0002-4004-a004-000000000024
+status: experimental
+description: >
+  Phien ban V4 (toi uu ngu canh) cho Kich ban 2. Bat yeu cau ve TGS (4769) nham vao SPN cua HIS
+  (SVC_HIS_Database / MSSQLSvc) o CA hai loai ma hoa 0x17 va 0x12, ROI loai tru luu luong hop le
+  cua chinh phan mem HIS. Whitelist NEO VAO TRUONG DO KDC XAC THUC (TargetUserName + IpAddress
+  trong 4769) nen ke tan cong tu WS01 khong gia mao duoc (xem ghi chu Kerckhoffs ben duoi).
+author: "Vu Thuy Huong (20225135 - HUST)"
+references:
+  - https://github.com/SigmaHQ/sigma/blob/master/rules/windows/builtin/security/win_security_susp_rc4_kerberos.yml
+  - https://www.thehacker.recipes/ad/movement/kerberos/kerberoast
+  - https://doi.org/10.1145/357830.357849
+date: 2026/11/20
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_tgs_his:
+    EventID: 4769
+    ServiceName|contains:
+      - 'SVC_HIS_Database'
+      - 'MSSQLSvc'
+    TicketEncryptionType:
+      - '0x17'
+      - '0x12'
+  reduction_machine:
+    ServiceName|endswith: '$'
+  filter_his_identity_source:
+    # ===== WHITELIST NEO VAO DANH TINH + IP NGUON (khong neo vao encryption-type) =====
+    TargetUserName: 'SVC_HIS_Sync'
+    IpAddress: '172.31.10.22'   # SRV02 - xem KHOI GHI CHU IP ben duoi truoc khi dung lai lab
+  condition: selection_tgs_his and not reduction_machine and not filter_his_identity_source
+falsepositives:
+  - "IT_Admin ra soat SPN hop le tu may quan tri (them IP may do vao filter neu can)."
+level: high
+tags:
+  - attack.credential_access
+  - attack.t1558.003
+# ============================================================================
+# KHOI GHI CHU IP (tune cho phong kham khac HOAC dung lai lab):
+#   IpAddress = 172.31.10.22 GIA DINH SRV02 duoc GHIM dung Private IP nay luc launch EC2
+#   (xem AWS_EC2_3VM_DEPLOYMENT_GUIDE.md muc 1.2 - "Ghim Primary private IP"). Neu de AWS cap
+#   IP ngau nhien, SUA dong IpAddress o tren thanh IP that cua may chay phan mem HIS.
+#   -> Phong kham khac: dien IP tinh cua may chu HIS vao day va TargetUserName = tai khoan dich vu HIS.
+#
+# KERCKHOFFS: 4769 do KDC (DC) sinh, LUON co TargetUserName + IpAddress that; ke tan cong tren
+#   WS01 khong gia mao duoc 2 truong nay. Nen whitelist "bo qua khi nguoi xin ve la SVC_HIS_Sync
+#   tu SRV02" du ke tan cong biet van khong lach duoc (tru khi chiem duoc chinh SVC_HIS_Sync -> bai toan khac).
+#   Neu muon phong thu chieu sau, co the them "and not source.ip != SRV02" nhung khong bat buoc.
+#
+# LUU Y: V4 nen chong len nguong V3 (sc2_v3) de vua loc ngu canh vua chan low-and-slow. Trong
+#   thuc nghiem co the chay rieng V4 (detection+filter) va bao cao ket hop V3+V4.
+# ============================================================================

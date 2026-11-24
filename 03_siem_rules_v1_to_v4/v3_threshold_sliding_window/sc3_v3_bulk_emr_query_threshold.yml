@@ -1,0 +1,33 @@
+# ============================================================================
+# [SC3-V3] nguong doc hang loat benh an (33205 SELECT tren HoSoBenhAn).
+# Y tuong: HIS/bac si hop le tra cuu benh an LE (SELECT ... WHERE MaBenhAn = ...). Tan cong P4a
+#   dump TOAN BO bang -> sinh cum 33205 SELECT lon trong thoi gian ngan. Dat nguong so ban ghi/su kien.
+#
+# PROVENANCE:
+#   - 33205 SQL Server Audit: Microsoft Learn "SQL Server Audit Records".
+#   - nguong: Sigma Correlation (event_count/value_count) - sigmahq.io/docs/meta/correlations.html
+#   - Khai niem "bulk read / mass data access" la chuan trong MITRE T1005 (Data from Local System).
+#
+# PLACEHOLDER: HIS tra cuu le ~1 ban ghi/lan; dump la hang chuc-tram ban ghi/phut. Tune tu baseline.
+# ============================================================================
+title: "[SC3-V3] Doc hang loat HoSoBenhAn qua nguong 33205 SELECT (placeholder)"
+id: 11111111-0003-4003-a003-000000000023
+status: experimental
+description: >
+  Bat khi so su kien 33205 SELECT tren dbo.HoSoBenhAn tu cung mot nguon vuot nguong trong cua so.
+  Tach duoc exfil hang loat khoi tra cuu le binh thuong. Van bat nham tac vu backup cuoi ngay (xu ly o V4).
+author: "Vu Thuy Huong (20225135 - HUST)"
+correlation:
+  type: event_count
+  rules:
+    - 11111111-0003-4002-a002-000000000013   # sc3_v2_all_his_db_smb_access
+  group-by:
+    - ServerPrincipalName    # hoac client/host tuy field 33205 phan tich duoc
+  timespan: 1m
+  condition:
+    gte: 50            # <-- PLACEHOLDER: tune tu baseline SELECT hop le
+level: high
+tags:
+  - attack.collection
+  - attack.t1005
+  - attack.t1485

@@ -1,0 +1,40 @@
+title: "[SC3-V2] Phat hien moi truy cap CSDL benh an & SMB BenhAn$ - BAN NOI LONG"
+id: 11111111-0003-4002-a002-000000000013
+status: experimental
+description: >
+  Phien ban V2 (NOI LONG) cho Kich ban 3. V1 chi bat sqlservr.exe sinh shell (Sysmon 1). V2 mo
+  rong: bat MOI thao tac 33205 doc/ghi bang HoSoBenhAn VA moi truy cap SMB BenhAn$ (5140/5145),
+  bat ke nguon nao. Muc tieu: khong bo lot doc/xoa trai phep. Hau qua co chu dich: moi lan HIS
+  tra cuu benh an le va dong bo XML BHYT (5 phut/lan) deu bi bat nham -> FP tang len rat nhieu.
+# PROVENANCE:
+#   - 33205 (SQL Server Audit) & 15457 (sp_configure/xp_cmdshell): Microsoft Learn "SQL Server Audit Records",
+#     NetSPI PowerUpSQL. 5140/5145 (SMB): Microsoft audit File Share.
+#   - sqlservr->shell nen tang V1: Elastic "Execution via MSSQL xp_cmdshell" + Splunk "Windows Sqlservr Spawning Shell"
+#     (id d33aac9f-030c-4830-8701-0c2dd75bb6cb)
+#   - Phan noi long la cua do an, khong phai rule cong bo san.
+author: "Vu Thuy Huong (20225135 - HUST)"
+references:
+  - https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-records
+  - https://research.splunk.com/endpoint/d33aac9f-030c-4830-8701-0c2dd75bb6cb/
+  - https://www.elastic.co/guide/en/security/current/execution-via-mssql-xp-cmdshell-stored-procedure.html
+date: 2026/11/16
+logsource:
+  product: windows
+  service: application   # 33205/15457 nam o Application log
+detection:
+  selection_sql_audit:
+    EventID: 33205
+    # Khong loc theo nguon/loai thao tac -> bat ca SELECT/INSERT/UPDATE/DELETE tren HoSoBenhAn
+  selection_xpcmd:
+    EventID: 15457
+  condition: selection_sql_audit or selection_xpcmd
+falsepositives:
+  - "Moi truy van SELECT/INSERT hop le cua SVC_HIS_Sync khi dong bo XML BHYT va bac si tra cuu le."
+level: medium
+tags:
+  - attack.execution
+  - attack.t1059.003
+  - attack.t1005
+  - attack.t1485
+# GHI CHU: nhanh SMB 5140/5145 nam o Security log (khac logsource). Neu muon gop, tach rule
+#   phu sc3_v2_smb.yml voi logsource service: security. KQL ngang hang da gop san o .ndjson.

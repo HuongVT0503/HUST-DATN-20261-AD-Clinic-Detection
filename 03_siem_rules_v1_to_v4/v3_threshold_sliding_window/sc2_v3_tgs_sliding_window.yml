@@ -1,0 +1,34 @@
+# ============================================================================
+# [SC2-V3] Cua so truot tan suat ve TGS (4769) toi cung 1 tai khoan dich vu
+# Y tuong: Kerberoasting (ca OpSec 0x12 cham) xin NHIEU ve TGS cho CUNG user-SPN trong cua so;
+#   HIS hop le xin ve deu dan, it bien thien. Dat nguong theo cap (TargetUserName) trong timespan.
+#
+# PROVENANCE:
+#   - Base: sc2_v2 (ke thua SigmaHQ 496a0e47-... Florian Roth).
+#   - nguong/cua so: Sigma Correlation spec (event_count) - https://sigmahq.io/docs/meta/correlations.html
+#   - Analogue thuc te: Elastic prebuilt "Newly Observed RC4 Kerberos Service Ticket Request" (rule type new_terms, phat hien cap requester-service LAN DAU trong 7 ngay):
+#       https://www.elastic.co/docs/reference/security/prebuilt-rules/rules/windows/credential_access_kerberos_service_ticket_rc4
+#     -> chung minh cach tiep can "tan suat/bat thuong" thay vi chu ky la chuan nganh.
+#
+# PLACEHOLDER: nguong gte va timespan phai tune tu baseline 4769 that cua HIS
+# ============================================================================
+title: "[SC2-V3] Kerberoast qua cua so truot 4769 toi user-SPN (placeholder)"
+id: 11111111-0002-4003-a003-000000000022
+status: experimental
+description: >
+  Bat khi so ve TGS (4769) toi cung mot TargetUserName (tai khoan dich vu co SPN) vuot nguong
+  trong cua so thoi gian. Bat ca RC4 lan AES vi khong phu thuoc encryption-type. Giam FP so voi V2.
+author: "Vu Thuy Huong (20225135 - HUST)"
+correlation:
+  type: event_count
+  rules:
+    - 11111111-0002-4002-a002-000000000012   # sc2_v2_kerberoast_rc4_and_aes_0x12
+  group-by:
+    - TargetUserName
+  timespan: 10m
+  condition:
+    gte: 10            # <-- PLACEHOLDER: tune tu baseline (HIS xin bao nhieu ve/10 phut?)
+level: high
+tags:
+  - attack.credential_access
+  - attack.t1558.003
