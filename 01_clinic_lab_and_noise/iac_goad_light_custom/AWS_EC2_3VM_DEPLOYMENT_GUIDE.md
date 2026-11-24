@@ -219,9 +219,9 @@ Vẫn đứng trên máy trạm **`WS01`**, chạy lần lượt 3 kịch bản 
    > **Chạy ĐÚNG THỨ TỰ P3 -> (P2+P4) -> P5.** Đọc/xóa phải chạy khi Audit còn ON mới sinh 33205; tắt Audit là bước CUỐI. Nếu tắt Audit trước thì DELETE không để lại 33205.
    ```powershell
    cd C:\HUST-DATN-20261-AD-Clinic-Detection\02_telemetry_and_scenarios\scenario_03_his_db_tampering
-   sqlcmd -S SRV02.clinic.local -E -i .\enable_xp_cmdshell_15457.sql       # P3: 15457 + Sysmon 1
-   sqlcmd -S SRV02.clinic.local -E -i .\abuse_svc_his_read_delete_emr.sql  # P2 persistence + P4 doc/xoa: 33205
-   sqlcmd -S SRV02.clinic.local -E -i .\disable_sql_audit_33205.sql        # P5 CUOI CUNG: 33205 STATE=OFF
+   sqlcmd -S SRV02.clinic.local -E -i .\enable_xp_cmdshell_15457.sql      | Tee-Object -FilePath C:\ground_truth_sql.log -Append         # P3: 15457 + Sysmon 1
+   sqlcmd -S SRV02.clinic.local -E -i .\abuse_svc_his_read_delete_emr.sql | Tee-Object -FilePath C:\ground_truth_sql.log -Append         # P2 persistence + P4 doc/xoa: 33205
+   sqlcmd -S SRV02.clinic.local -E -i .\disable_sql_audit_33205.sql       | Tee-Object -FilePath C:\ground_truth_sql.log -Append         # P5 CUOI CUNG: 33205 STATE=OFF 
    ```
 ---
 
@@ -237,5 +237,8 @@ Vẫn đứng trên máy trạm **`WS01`**, chạy lần lượt 3 kịch bản 
    wevtutil epl Application "C:\sample_srv02_application_sql_33205_15457.evtx"
    ```
 3. Copy cả 3 tệp `.evtx` vừa xuất về thư mục `04_evaluation_and_datasets/evtx_master_datasets/` trên máy tính cá nhân của bạn qua cửa sổ RDP.
+# Copy ca 2 file ground truth ve cung .evtx de gan nhan
+# Tren WS01: C:\ground_truth.csv   (nhan SC1/SC2)
+# Tren SRV02: C:\ground_truth_sql.log (nhan SC3)
 4. **Hủy máy ảo AWS (Quan trọng):** Quay lại giao diện **AWS EC2 Console**, tích chọn cả 3 máy `DC01`, `SRV02`, `WS01` -> Nhấn **Instance state** -> **Terminate (delete) instance** để dừng tính phí đám mây.
 5. **Phân tích trên SIEM Offline (WSL2 Docker):** Bật môi trường ELK Stack trên WSL2 theo hướng dẫn tại `README.md` chính của kho mã nguồn để nạp 3 tệp `.evtx` và kiểm thử bộ luật Sigma/KQL từ **V1 -> V4**.

@@ -23,6 +23,12 @@ param(
 )
 
 $ErrorActionPreference = "SilentlyContinue"
+
+# Ghi moc ground truth ra CSV de gan nhan .evtx 
+$GtFile = "C:\ground_truth.csv"
+if (-not (Test-Path $GtFile)) { "timestamp,scenario,phase" | Set-Content -Path $GtFile -Encoding UTF8 }
+"$(Get-Date -Format 'o'),SC2-2B,START" | Add-Content -Path $GtFile
+
 Write-Host "[*] [SC2-2B EVASION] Kerberoast OpSec xin ve AES256 0x12 nham $Spn (muc tieu: vuot qua V1)." -ForegroundColor Cyan
 Write-Host "    BAT DAU: $(Get-Date -Format 'o')" -ForegroundColor Yellow
 
@@ -38,6 +44,8 @@ catch {
 
 # Pha 2B chi sinh su kien 4769 (xin ve TGS) de xay dung/kiem thu luat phat hien.
 # KHONG export ve de crack offline - do an la detection engineering, chi can telemetry.
+
+"$(Get-Date -Format 'o'),SC2-2B,END" | Add-Content -Path $GtFile
 
 Write-Host "    KET THUC: $(Get-Date -Format 'o')" -ForegroundColor Yellow
 Write-Host "[+] [SC2-2B] Xong. Kiem tra DC01 -> Security log -> Event ID 4769, TicketEncryptionType 0x12." -ForegroundColor Green

@@ -26,6 +26,12 @@
 #>
 
 $ErrorActionPreference = "SilentlyContinue"
+
+# Ghi moc ground truth ra CSV de gan nhan .evtx
+$GtFile = "C:\ground_truth.csv"
+if (-not (Test-Path $GtFile)) { "timestamp,scenario,phase" | Set-Content -Path $GtFile -Encoding UTF8 }
+"$(Get-Date -Format 'o'),SC1-1A,START" | Add-Content -Path $GtFile
+
 Write-Host "[*] [SC1-1A DEFAULT] Do quet AD bang chu ky mac dinh (muc tieu: V1 bat trung)." -ForegroundColor Cyan
 Write-Host "    BAT DAU (ghi lai lam ground truth): $(Get-Date -Format 'o')" -ForegroundColor Yellow
 
@@ -49,6 +55,8 @@ if (Test-Path $SharpHound) {
 } else {
     Write-Host "[i] Khong co C:\Tools\SharpHound.exe -> bo qua, chi dua vao setspn (du cho SC1-V1)." -ForegroundColor Gray
 }
+
+"$(Get-Date -Format 'o'),SC1-1A,END" | Add-Content -Path $GtFile
 
 Write-Host "    KET THUC: $(Get-Date -Format 'o')" -ForegroundColor Yellow
 Write-Host "[+] [SC1-1A] Xong. Kiem tra WS01 -> Sysmon Event ID 1 co ban ghi setspn.exe (va SharpHound.exe neu chay)." -ForegroundColor Green

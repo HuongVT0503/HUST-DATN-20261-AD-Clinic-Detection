@@ -24,6 +24,12 @@ param(
 )
 
 $ErrorActionPreference = "SilentlyContinue"
+
+# Ghi moc ground truth ra CSV de gan nhan .evtx
+$GtFile = "C:\ground_truth.csv"
+if (-not (Test-Path $GtFile)) { "timestamp,scenario,phase" | Set-Content -Path $GtFile -Encoding UTF8 }
+"$(Get-Date -Format 'o'),SC1-1B,START" | Add-Content -Path $GtFile
+
 Write-Host "[*] [SC1-1B EVASION] Do quet ADSI low-and-slow (muc tieu: vuot qua V1, sinh 1644)." -ForegroundColor Cyan
 Write-Host "    BAT DAU: $(Get-Date -Format 'o')" -ForegroundColor Yellow
 
@@ -49,6 +55,8 @@ for ($i = 1; $i -le $QueryCount; $i++) {
     # Do tre lon (low and slow) de xuong duoi nguong 50 truy van/phut cua V3
     Start-Sleep -Seconds (Get-Random -Minimum $MinDelaySeconds -Maximum $MaxDelaySeconds)
 }
+
+"$(Get-Date -Format 'o'),SC1-1B,END" | Add-Content -Path $GtFile
 
 Write-Host "    KET THUC: $(Get-Date -Format 'o')" -ForegroundColor Yellow
 Write-Host "[+] [SC1-1B] Xong. Kiem tra DC01 -> Directory Service log -> Event ID 1644." -ForegroundColor Green

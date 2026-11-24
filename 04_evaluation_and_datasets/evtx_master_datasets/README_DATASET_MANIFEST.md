@@ -18,3 +18,14 @@
 ## 2. Tuân thủ Quy định Ẩn danh hóa Dữ liệu Cá nhân Nhạy cảm (Luật 91/2025/QH15)
 
 Toàn bộ dữ liệu nằm trong trường `statement` của `Event ID 33205` thuộc tập dữ liệu này là dữ liệu giả lập (Synthetic EMR Data) và đã được xử lý qua công cụ `01_clinic_lab_and_noise/log_anonymizer/anonymize_sensitive_emr_logs.py` để băm một chiều (SHA-256 + Salt) các trường `SoCCCD`, `MaTheBHYT` và `HoTen`, đảm bảo tuân thủ nghiêm ngặt **Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15** và **Nghị định 356/2025/NĐ-CP**.
+
+## 3. Tập nhãn thời gian (Ground Truth Timestamps)
+
+gán nhãn tĩnh cho .evtx dựa trên 2 file mốc thời gian thu cùng lúc với .evtx:
+
+| File | Máy sinh | Nội dung | Dùng để gán nhãn |
+| :--- | :--- | :--- | :--- |
+| `ground_truth.csv` | WS01 | dòng `timestamp,scenario,phase` cho SC1-1A/1B, SC2-2A/2B (START/END mỗi pha) | khoảng thời gian tấn công của Kịch bản 1, 2 |
+| `ground_truth_sql.log` | SRV02 | output sqlcmd chứa `SYSDATETIME()` của các pha P3/P2+P4/P5 | khoảng thời gian tấn công của Kịch bản 3 |
+
+Quy ước: mọi cảnh báo rơi vào khoảng [START, END] của một pha tấn công -> gán True Positive (hoặc False Negative nếu luật bỏ lọt); cảnh báo ngoài các khoảng đó, sinh từ lưu lượng nền -> False Positive.
