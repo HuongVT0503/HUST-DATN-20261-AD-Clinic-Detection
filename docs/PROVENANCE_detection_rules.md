@@ -55,7 +55,10 @@ Nếu chỉ có IP đáng tin cậy: SC1-V4 neo theo IP nguồn (SRV02). Neo IP 
   (repo cũ: https://github.com/BloodHoundAD/SharpHound). Chỉ cần cho Kịch bản 1 bản đầy đủ;
   Kịch bản 1 tối thiểu dùng setspn native, không cần SharpHound.
 - Rubeus.exe (GhostPack): https://github.com/GhostPack/Rubeus. Cần cho Kịch bản 2 pha 0x17.
-  0x17 vs 0x12 và /tgtdeleg, /enctype: Rubeus README
+  Cơ chế: `/tgtdeleg` dùng thủ thuật GSS-API ép KDC cấp vé RC4 (0x17 downgrade) trên account có bật RC4.
+  KHÔNG dùng `/rc4opsec` (cờ này lọc bỏ account đã bật AES -> bỏ qua SVC_HIS_Database).
+  Pha 2B (OpSec 0x12) dùng .NET KerberosRequestorSecurityToken native, KHÔNG dùng Rubeus.
+  Nguồn: Rubeus README (mục kerberoast) + Will Schroeder (harmj0y), "Kerberoasting Revisited" (SpecterOps). (https://specterops.io/blog/2019/02/20/kerberoasting-revisited/)
 - Atomic Red Team (mẫu lệnh tấn công): https://github.com/redcanaryco/atomic-red-team
 
 ## 4. Kỹ thuật leo thang SQL (Kịch bản 3, pha P2)

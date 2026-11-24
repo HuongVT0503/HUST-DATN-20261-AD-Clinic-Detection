@@ -10,13 +10,14 @@
     Vi sao can Rubeus (doc ky trong README.md thu muc nay):
     SVC_HIS_Database ho tro CA RC4 lan AES (xem Import-ClinicADUsers.ps1), nen client
     Windows Server 2022 xin ve se MAC DINH nhan AES256 (0x12), KHONG phai 0x17. Muon ep
-    xuong 0x17 (de crack offline nhanh, va de V1 bat) phai dung tgtdeleg/rc4opsec cua
-    Rubeus. Native .NET KHONG ep duoc. Day la ly do pha "ha cap 0x17" bat buoc dung Rubeus.
+    xuong 0x17 (de crack offline nhanh, va de V1 bat) phai dung /tgtdeleg cua Rubeus
+    (thu thuat GSS-API ep cap ve RC4). Native .NET KHONG ep duoc. KHONG dung /rc4opsec:
+    co nay LOC BO account da bat AES nen se bo qua dung SVC_HIS_Database -> khong sinh 0x17.
 
     PHU THUOC CHUA CO: Rubeus.exe (GhostPack) KHONG nam trong repo, bootstrap KHONG tai ve.
     Lay o: https://github.com/GhostPack/Rubeus (tai release hoac tu build), dat vao C:\Tools.
     Nho Add-MpPreference -ExclusionPath "C:\Tools" vi Defender gan co Rubeus.
-    Co so 0x17 vs 0x12 va /rc4opsec: xem docs/PROVENANCE_detection_rules.md va keep.md.
+    Co so 0x17 vs 0x12 va /tgtdeleg: xem docs/PROVENANCE_detection_rules.md va keep.md.
 
     Chay trong ngu canh tai khoan da chiem (vi du BS_BacSi001 bi chiem o WS01).
 #>
