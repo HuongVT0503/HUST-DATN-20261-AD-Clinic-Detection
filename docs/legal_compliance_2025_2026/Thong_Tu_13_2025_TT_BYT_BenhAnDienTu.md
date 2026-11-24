@@ -44,6 +44,14 @@ Bảng `HoSoBenhAn` phản ánh cấu trúc bệnh án điện tử: các trư�
 - Database Audit Specification giám sát SELECT, INSERT, UPDATE, DELETE trên bảng `HoSoBenhAn` và nhóm sự kiện thay đổi trạng thái kiểm toán.
 - Mọi lần bật `xp_cmdshell` qua `sp_configure` sinh Event ID 15457 trong Application Log.
 
+## 3.3. hướng leo thang cho Kịch bản 3
+
+Kịch bản 3 cần một mốc hành vi sinh Event ID 33205 role-change để luật V4 bắt. Từ quyền local admin trên SRV02, đưa SQL về single-user mode để đạt sysadmin rồi
+ghi quyền vĩnh viễn (ALTER SERVER ROLE sysadmin ADD MEMBER). -> chỉ dùng công cụ sẵn có của Windows/SQL (không tải hacktool ngoài), và sinh đúng một ban ghi 33205 role-change rõ ràng. 
+Nguồn: Microsoft Learn "Connect to SQL Server When System Administrators Are Locked Out".
+
+Ghi chú phạm vi: đồ án là detection engineering, dữ liệu .evtx sinh từ các hành vi SAU khi đã có sysadmin. Có thể mô hình hóa theo hướng "tài khoản dịch vụ bị cấp dư quyền sysadmin" để bỏ hẳn bước exploit leo thang mà vẫn đủ telemetry cần bắt.
+
 ## 4. Chốt chặn trong luật V4
 
 Thông tư 13/2025 thể hiện trong Detection Engineering, thể hiện trong luật

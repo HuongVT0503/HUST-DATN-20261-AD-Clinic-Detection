@@ -183,16 +183,20 @@ cd C:\HUST-DATN-20261-AD-Clinic-Detection\01_clinic_lab_and_noise\iac_goad_light
 Khi cả 3 máy `DC01`, `SRV02`, `WS01` đã sẵn sàng, đứng trên máy trạm **`WS01`** thực hiện tuần tự 2 luồng sau để tạo ra tập dữ liệu nhật ký chuẩn (Master Dataset):
 
 ### Bước 7.1: Bật Bộ Sinh Nhiễu Nghiệp vụ Phòng khám (Business Noise Generators)
-Trên máy **`WS01`**, chạy 2 kịch bản sinh nhiễu nền:
+Noise giao ca chạy trên **WS01** (máy trạm dùng chung), còn noise đồng bộ HIS chạy trên **SRV02** để log 1644 mang IP nguồn SRV02, khớp whitelist V4. Nếu chạy chung trên WS01 thì 1644 sẽ mang IP của WS01, mà WS01 là nơi kẻ tấn công xuất phát nên không whitelist theo IP đó được.
+
+**Trên máy `WS01`** (giao ca trực, sinh 4624/4625):
 ```powershell
 cd C:\HUST-DATN-20261-AD-Clinic-Detection\01_clinic_lab_and_noise\business_noise_generators
-
-# 1. Mô phỏng Y Bác sĩ đăng nhập/đăng xuất đổi ca trực (Sinh Event ID 4624 & 5% gõ sai mật khẩu Event ID 4625 trên DC01)
 .\Invoke-DoctorShiftChange_4624_4625.ps1
+```
 
-# 2. Mô phỏng phần mềm HIS dùng SVC_HIS_Sync đồng bộ XML BHYT qua \\SRV02\BenhAn$ và truy vấn lẻ CSDL HIS_ClinicDB
+**Trên máy `SRV02`** (đồng bộ HIS, sinh 1644/33205/5140 với IP nguồn = SRV02):
+```powershell
+cd C:\HUST-DATN-20261-AD-Clinic-Detection\01_clinic_lab_and_noise\business_noise_generators
 .\Invoke-HISXmlSync_QD130_QD4750.ps1 -TargetServer "SRV02.clinic.local"
 ```
+> Để log 1644/33205 đúng là của `SVC_HIS_Sync` (không phải Administrator), nên đăng ký task này bằng `Register-ClinicNoiseScheduledTasks.ps1` chạy trên SRV02 (task đã cấu hình chạy dưới `CLINIC\SVC_HIS_Sync`), thay vì chạy tay qua RDP bằng Administrator.
 
 ### Bước 7.2: Thực thi 3 Kịch bản Tấn công Mặc định & Tấn công Lẩn tránh (Ghi lại Timestamp)
 Vẫn đứng trên máy trạm **`WS01`**, chạy lần lượt 3 kịch bản kiểm thử trong thư mục `02_telemetry_and_scenarios/`:
@@ -208,16 +212,17 @@ Vẫn đứng trên máy trạm **`WS01`**, chạy lần lượt 3 kịch bản 
    cd C:\HUST-DATN-20261-AD-Clinic-Detection\02_telemetry_and_scenarios\scenario_02_kerberoast_opsec
    .\attack_rc4_downgrade_0x17.ps1         # Yêu cầu vé TGS hạ cấp mã hóa RC4 0x17 (Bị bắt bởi V1)
    .\evasion_aes256_opsec_0x12.ps1         # Yêu cầu vé TGS mã hóa AES256 0x12 (Vượt qua V1, sinh Event 4769 0x12 trên DC01)
-   ```
+   ```   
 3. **Kịch bản 3 (Lạm dụng `SVC_HIS_Database` tấn công CSDL Bệnh án `HIS_ClinicDB` trên `SRV02`):**
    > Lưu ý xác thực: `SVC_HIS_Database` là **Windows login**, không thể dùng SQL auth `-U/-P` với tên miền. Phải chạy sqlcmd bằng **integrated auth (`-E`) trong ngữ cảnh của chính `SVC_HIS_Database`**, dùng mật khẩu lấy được sau khi Kerberoast ở Kịch bản 2 (ví dụ mở một shell chạy as `SVC_HIS_Database` bằng `runas /netonly`, rồi chạy các lệnh dưới). Vì tài khoản này chỉ có `db_datareader/writer` và bị DENY DELETE, bước đầu của kịch bản là leo thang `sysadmin` thì các lệnh sau mới chạy được (và chính bước leo thang + tắt audit là cái luật V4 bắt qua Event 33205).
+   > **Tiền đề:** mở một phiên `sqlcmd` đã ở quyền `sysadmin`. Trong lab, quyền sysadmin đạt được theo hướng single-user mode, xem `scenario_03/README.md` và nguồn Microsoft Learn "Connect to SQL Server When System Administrators Are Locked Out". 
+   > **Chạy ĐÚNG THỨ TỰ P3 -> (P2+P4) -> P5.** Đọc/xóa phải chạy khi Audit còn ON mới sinh 33205; tắt Audit là bước CUỐI. Nếu tắt Audit trước thì DELETE không để lại 33205.
    ```powershell
    cd C:\HUST-DATN-20261-AD-Clinic-Detection\02_telemetry_and_scenarios\scenario_03_his_db_tampering
-   sqlcmd -S SRV02.clinic.local -E -i .\enable_xp_cmdshell_15457.sql
-   sqlcmd -S SRV02.clinic.local -E -i .\disable_sql_audit_33205.sql
-   sqlcmd -S SRV02.clinic.local -E -i .\abuse_svc_his_read_delete_emr.sql
+   sqlcmd -S SRV02.clinic.local -E -i .\enable_xp_cmdshell_15457.sql       # P3: 15457 + Sysmon 1
+   sqlcmd -S SRV02.clinic.local -E -i .\abuse_svc_his_read_delete_emr.sql  # P2 persistence + P4 doc/xoa: 33205
+   sqlcmd -S SRV02.clinic.local -E -i .\disable_sql_audit_33205.sql        # P5 CUOI CUNG: 33205 STATE=OFF
    ```
-
 ---
 
 ## 8. Giai đoạn 7: Trích xuất Tệp `.evtx`, Ẩn danh hóa và Tắt Hạ tầng AWS

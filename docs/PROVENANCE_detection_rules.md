@@ -45,7 +45,7 @@ File này ghi lại nguồn các luật V1 (baseline "giải pháp hiện có") 
   (repo cũ: https://github.com/BloodHoundAD/SharpHound). Chỉ cần cho Kịch bản 1 bản đầy đủ;
   Kịch bản 1 tối thiểu dùng setspn native, không cần SharpHound.
 - Rubeus.exe (GhostPack): https://github.com/GhostPack/Rubeus. Cần cho Kịch bản 2 pha 0x17.
-  0x17 vs 0x12 và /tgtdeleg, /rc4opsec: Rubeus README + The Hacker Recipes https://www.thehacker.recipes/ad/movement/kerberos/kerberoast
+  0x17 vs 0x12 và /tgtdeleg, /enctype: Rubeus README
 - Atomic Red Team (mẫu lệnh tấn công): https://github.com/redcanaryco/atomic-red-team
 
 ## 4. Kỹ thuật leo thang SQL (Kịch bản 3, pha P2)
