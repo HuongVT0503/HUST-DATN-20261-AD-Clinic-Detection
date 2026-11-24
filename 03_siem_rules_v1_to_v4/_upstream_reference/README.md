@@ -13,6 +13,9 @@ Thư mục này chứa bản gốc các luật cộng đồng mà bộ luật V1
 | Windows Sqlservr Spawning Shell (SC3-V1) | Splunk security_content | **Apache-2.0** | Được, kèm attribution |
 | Execution via MSSQL xp_cmdshell (SC3-V1) | Elastic detection-rules | **Elastic License v2** | **KHÔNG** vendor — chỉ link |
 
+"Execution via MSSQL xp_cmdshell Stored Procedure": https://www.elastic.co/guide/en/security/current/execution-via-mssql-xp-cmdshell-stored-procedure.html
+  Repo luật: https://github.com/elastic/detection-rules
+
 ## Lưu ý
 - Mọi tùy biến nằm ở `03_siem_rules_v1_to_v4/v1_default_ootb/`.
 - Attribution đầy đủ: `NOTICE.md`.

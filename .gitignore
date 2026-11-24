@@ -5,4 +5,7 @@ __pycache__/
 03_siem_rules_v1_to_v4/elk_docker_wsl2/esdata/
 repomix-output.xml
 
+# Dataset .evtx KHONG commit vao repo. Phan phoi qua GitHub Release.
+# Xem 04_evaluation_and_datasets/evtx_master_datasets/README_DATASET_MANIFEST.md muc 4.
 *.evtx
+*.evtx.zip

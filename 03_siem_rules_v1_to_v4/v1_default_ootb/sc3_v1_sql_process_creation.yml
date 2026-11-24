@@ -7,7 +7,7 @@ description: >
   khi sqlservr.exe sinh cmd.exe hoac powershell.exe (Kich ban 3, pha xp_cmdshell).
   Diem mu: Bo lot pha tat SQL Audit (33205) va pha dung sqlcmd hop le doc/xoa trai phep bang
   dbo.HoSoBenhAn khi khong di qua xp_cmdshell.
-author: "Elastic; Splunk Threat Research Team; tuy bien cho lab phong kham boi Vu Thuy Huong (20225135 - HUST)"
+author: "Elastic; Splunk Threat Research Team; da tuy bien cho lab phong kham boi Vu Thuy Huong (20225135 - HUST)"
 references:
   - https://www.elastic.co/guide/en/security/current/execution-via-mssql-xp-cmdshell-stored-procedure.html
   - https://research.splunk.com/endpoint/d33aac9f-030c-4830-8701-0c2dd75bb6cb/

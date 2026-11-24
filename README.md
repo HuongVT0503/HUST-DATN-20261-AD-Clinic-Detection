@@ -120,7 +120,7 @@ HUST-DATN-20261-AD-Clinic-Detection/
 │   └── tuning_playbook/                      # Hướng dẫn vận hành & kiếm tra cảnh báo 30 phút đầu giờ cho IT phòng khám
 │
 ├── 04_evaluation_and_datasets/               # [PHẦN 3B] Tập dữ liệu .evtx chuẩn & công cụ đo lường thực nghiệm
-│   ├── evtx_master_datasets/                 # Các tệp log mẫu (.evtx) đã gán nhãn thời gian và ẩn danh hóa
+│   ├── evtx_master_datasets/                 # Các tệp log mẫu (.evtx) đã gán nhãn thời gian và ẩn danh hóa (phân phối qua GitHub Release, xem README_DATASET_MANIFEST.md)
 │   ├── alerts_exported_csv/                  # Kết quả cảnh báo xuất từ SIEM qua 4 vòng lặp V1 -> V4
 │   ├── notebooks_and_scripts/                # Script Python/Jupyter tính Confusion Matrix & vẽ đồ thị Precision-Recall
 │   └── figures/                              # Biểu đồ thực nghiệm

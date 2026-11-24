@@ -18,6 +18,8 @@ thành phần, nguồn gốc, và license của chúng.
 | SC3-V1 (tham chiếu) | Elastic `Execution via MSSQL xp_cmdshell Stored Procedure` | — | Elastic License v2 (chỉ tham chiếu) |
 | V2/V3/V4 | Tự viết (widen/threshold/context) dựa trên các nguồn trên + Sigma Correlation spec | — | MIT (phần tự viết) / DRL-1.1 (phần kế thừa) |
 
+Bản gốc 3 rule baseline nằm ở 03_siem_rules_v1_to_v4/_upstream_reference/
+
 ## Telemetry
 | Thành phần | Nguồn | License |
 | --- | --- | --- |
