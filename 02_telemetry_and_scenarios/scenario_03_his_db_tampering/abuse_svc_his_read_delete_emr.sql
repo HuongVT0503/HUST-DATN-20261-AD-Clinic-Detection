@@ -5,6 +5,8 @@ Tep: 02_telemetry_and_scenarios/scenario_03_his_db_tampering/abuse_svc_his_read_
 KICH BAN 3 - PHA P2 (persistence) + P4 (doc hang loat + xoa benh an da ky so).
 Chay trong LAB CO LAP (clinic.local) 
 
+MITRE ATT&CK: T1078/T1098 (P2 them sysadmin), T1005 (P4a doc hang loat), T1485 (P4b xoa benh an).
+
 THU TU CHAY:
   1. enable_xp_cmdshell_15457.sql   (P3)
   2. abuse_svc_his_read_delete_emr.sql  <-- FILE NAY (P2 persistence + P4 doc/xoa)

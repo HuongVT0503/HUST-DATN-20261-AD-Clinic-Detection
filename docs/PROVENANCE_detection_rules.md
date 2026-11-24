@@ -25,7 +25,13 @@ File này ghi lại nguồn các luật V1 (baseline "giải pháp hiện có") 
 - Nguồn 2: Splunk ESCU "Windows Sqlservr Spawning Shell", tác giả Splunk Threat Research Team
   - id: `d33aac9f-030c-4830-8701-0c2dd75bb6cb`
   - Link: https://research.splunk.com/endpoint/d33aac9f-030c-4830-8701-0c2dd75bb6cb/
-- MITRE: T1059.003, T1098/T1078 (thêm mình vào sysadmin), T1070.001 kiểu "indicator removal" (tắt audit), T1485 (data destruction, xóa bệnh án)
+- MITRE (chuoi Kich ban 3, xuyen tang):
+  - T1558.003 Kerberoasting (P1, lay hash SVC_HIS_Database) - trung voi SC2
+  - T1078 Valid Accounts + T1098 Account Manipulation (P2, tu them vao server role sysadmin)
+  - T1059.003 Command and Scripting Interpreter: Windows Command Shell (P3, xp_cmdshell -> cmd.exe)
+  - T1005 Data from Local System (P4a, doc hang loat bang HoSoBenhAn)
+  - T1485 Data Destruction (P4b, DELETE benh an da ky so)
+  - T1562.001 Impair Defenses: Disable or Modify Tools (P5, tat SQL Server Audit)
 
 ## 2. Telemetry
 

@@ -5,6 +5,8 @@
 ĐẶC TẢ THIẾT KẾ HƯỚNG PHÁT HIỆN,  kèm script tấn công chạy sẵn. 
 mục tiêu đồ án là detection engineering, cái được chấm là luật phát hiện và telemetry, không phải bộ công cụ tấn công
 
+MITRE ATT&CK (chuỗi xuyên tầng): T1558.003 (P1) -> T1078/T1098 (P2) -> T1059.003 (P3) -> T1005+T1485 (P4) -> T1562.001 (P5).
+
 ## 1. Tiền đề (misconfig làm điểm tựa, KHÔNG phải misconfig thường)
 
 Điểm tựa KHÔNG phải là mật khẩu `sa` yếu. Điểm tựa là một over-privilege thực tế rất hay gặp ở phòng khám Việt Nam: tài khoản dịch vụ HIS được nhà cung cấp cấu hình làm **local administrator trên chính máy chủ CSDL** (trong lab là `SVC_HIS_Database` thuộc nhóm Administrators của SRV02, đã set ở `04_SRV02_Stage2_SetupHIS_SQL_SMB.ps1`). Đây là loại cấu hình sai nghiêm trọng và khó phát hiện mà đề tài muốn chỉ ra,  không phải lỗi sơ đẳng.

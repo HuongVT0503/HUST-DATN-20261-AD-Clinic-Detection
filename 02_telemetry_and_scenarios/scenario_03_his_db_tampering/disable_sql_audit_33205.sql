@@ -5,6 +5,8 @@ Tep: 02_telemetry_and_scenarios/scenario_03_his_db_tampering/disable_sql_audit_3
 KICH BAN 3 - PHA P5: tat SQL Server Audit de xoa dau vet (anti-forensics).
 Chay trong LAB CO LAP (clinic.local)
 
+MITRE ATT&CK: T1562.001 (Impair Defenses: Disable or Modify Tools - tat SQL Server Audit).
+
 *** PHAI CHAY CUOI CUNG *** (sau enable_xp_cmdshell va abuse_read_delete).
 Ly do: chinh hanh dong tat audit nay sinh ra 33205 STATE=OFF - do la ban ghi
 cuoi cung ma V4 bat. Moi hanh vi doc/xoa o cac file truoc phai dien ra khi audit
