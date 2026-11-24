@@ -25,7 +25,7 @@ File này ghi lại nguồn các luật V1 (baseline "giải pháp hiện có") 
 - Nguồn 2: Splunk ESCU "Windows Sqlservr Spawning Shell", tác giả Splunk Threat Research Team
   - id: `d33aac9f-030c-4830-8701-0c2dd75bb6cb`
   - Link: https://research.splunk.com/endpoint/d33aac9f-030c-4830-8701-0c2dd75bb6cb/
-- MITRE: T1059.003
+- MITRE: T1059.003, T1098/T1078 (thêm mình vào sysadmin), T1070.001 kiểu "indicator removal" (tắt audit), T1485 (data destruction, xóa bệnh án)
 
 ## 2. Telemetry
 
@@ -39,6 +39,16 @@ File này ghi lại nguồn các luật V1 (baseline "giải pháp hiện có") 
 - Microsoft Learn "SQL Server Audit Records": https://learn.microsoft.com/en-us/sql/relational-databases/security/auditing/sql-server-audit-records
 - Elastic "MSSQL Audit Stopped or Tampered" (phát hiện tắt audit qua event.code 33205)
 
+### Cách kiểm tra Event 1644 có lộ danh tính người truy vấn hay không (làm 1 lần, sau khi có 1644 thật)
+Event 1644 tùy phiên bản Windows có thể chỉ có IP nguồn (trường Client) mà không có tên tài khoản như 1 field riêng. Phải kiểm tra trong lab để biết nên neo whitelist SC1-V4 theo danh tính + IP hay chỉ theo IP:
+- Kibana: Discover -> filter event.code: "1644" -> mở 1 document -> tab JSON -> đọc hết  winlog.event_data.* xem có trường nào (SubjectUserName / User / ...) chứa tên tài khoản và có giá trị không rỗng.
+- Hoặc trên DC01, sau khi chạy evasion_adsi_low_and_slow_spn.ps1:
+      Get-WinEvent -LogName "Directory Service" -FilterXPath "*[System[(EventID=1644)]]" -MaxEvents 1 | Format-List *
+  xem tên account là field riêng hay chỉ nằm rong Message.
+
+Nếu có danh tính dạng field: SC1-V4 neo theo danh tính + IP.
+Nếu chỉ có IP đáng tin cậy: SC1-V4 neo theo IP nguồn (SRV02). Neo IP vẫn thỏa mãn Kerckhoffs vì attacker từ WS01 không giả mạo được IP SRV02 khi chưa chiếm SRV02 (lúc đó SC3 bắt).
+
 ## 3. Dependency ngoài (tool KHÔNG nằm trong repo, người dựng lab phải tự tải)
 
 - SharpHound.exe (collector BloodHound): https://github.com/SpecterOps/BloodHound
@@ -51,5 +61,3 @@ File này ghi lại nguồn các luật V1 (baseline "giải pháp hiện có") 
 ## 4. Kỹ thuật leo thang SQL (Kịch bản 3, pha P2)
 
 - Microsoft Learn "Connect to SQL Server When System Administrators Are Locked Out" (single-user mode): https://learn.microsoft.com/en-us/sql/database-engine/configure-windows/connect-to-sql-server-when-system-administrators-are-locked-out
-- NetSPI PowerUpSQL (impersonate service account, EXECUTE AS, TRUSTWORTHY abuse): https://github.com/NetSPI/PowerUpSQL
-- Microsoft Learn `EXECUTE AS` và `TRUSTWORTHY`: tra trên learn.microsoft.com trước khi cite.

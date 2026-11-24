@@ -36,5 +36,8 @@ catch {
     Write-Warning "Khong xin duoc ve. Kiem tra SPN da gan dung chua: setspn -Q $Spn"
 }
 
+# Pha 2B chi sinh su kien 4769 (xin ve TGS) de xay dung/kiem thu luat phat hien.
+# KHONG export ve de crack offline - do an la detection engineering, chi can telemetry.
+
 Write-Host "    KET THUC: $(Get-Date -Format 'o')" -ForegroundColor Yellow
 Write-Host "[+] [SC2-2B] Xong. Kiem tra DC01 -> Security log -> Event ID 4769, TicketEncryptionType 0x12." -ForegroundColor Green

@@ -5,9 +5,8 @@ Tep: 02_telemetry_and_scenarios/scenario_03_his_db_tampering/enable_xp_cmdshell_
 KICH BAN 3 - PHA P3: bat xp_cmdshell de thuc thi lenh he dieu hanh tu trong SQL.
 Chay trong LAB CO LAP (clinic.local)
 
-TIEN DE: phien ket noi nay da o quyen sysadmin (lay duoc o pha P2 - leo thang
-qua single-user mode, xem scenario_03/README.md Huong B1). Neu chay bang
-SVC_HIS_Database thuong (chi db_datareader/writer) thi sp_configure se bi tu choi.
+TIEN DE: phien ket noi nay da o quyen sysadmin (lay duoc o pha P2 - leo thang qua single-user mode, xem scenario_03/README.md). 
+Neu chay bang SVC_HIS_Database thuong (chi db_datareader/writer) thi sp_configure se bi tu choi.
 
 TELEMETRY sinh ra de bat:
   - Event ID 15457 (Windows Application Log, source MSSQLSERVER): moi lan doi

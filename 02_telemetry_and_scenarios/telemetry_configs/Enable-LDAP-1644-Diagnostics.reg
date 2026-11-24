@@ -3,7 +3,7 @@ Windows Registry Editor Version 5.00
 ; ==============================================================================
 ; Mo ta: Kich hoat ghi vet chi tiet truy van LDAP Active Directory (Event ID 1644)
 ;        va ha nguong tim kiem xuong 1 de bat ky thuat do quet cham qua ADSI.
-; SUA: chuan Microsoft -> "15 Field Engineering" nam o key Diagnostics; con 2 nguong
+;      chuan Microsoft -> "15 Field Engineering" nam o key Diagnostics; con 2 nguong
 ;      Expensive/Inefficient Search Results Threshold va Search Time Threshold nam o key
 ;      Parameters. 
 ; Nguon: Microsoft - How to find expensive/inefficient/long running LDAP queries (xem keep.md).

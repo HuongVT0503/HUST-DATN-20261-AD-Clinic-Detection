@@ -1,4 +1,4 @@
-<Sysmon schemaversion="4.90">
+<Sysmon schemaversion="4.90">   <!--kiểm tra bản Sysmon tải về có nuốt schema này không, nếu báo lỗi schema thì hạ số cho khớp-->
   <!--
   ============================================================================
   Tep: 02_telemetry_and_scenarios/telemetry_configs/sysmon_clinic_config.xml
@@ -67,6 +67,8 @@
       <ProcessAccess onmatch="include"></ProcessAccess>
       <ImageLoad onmatch="include"></ImageLoad>
     </RuleGroup>
+
+    <!-- Config KHÔNG bắt được ADSI evasion của scenario_01 (vì nó chạy in-process trong powershell.exe, không tạo process con)-> scenario_01 phải dựa vào 1644 chứ không Sysmon -->
 
   </EventFiltering>
 </Sysmon>

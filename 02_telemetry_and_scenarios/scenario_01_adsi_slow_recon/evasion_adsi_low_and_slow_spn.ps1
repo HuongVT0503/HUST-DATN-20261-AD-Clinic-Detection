@@ -32,7 +32,9 @@ $Filters = @(
     "(&(objectCategory=user)(servicePrincipalName=*MSSQL*))",   # tim tai khoan SQL co SPN -> Kerberoast
     "(&(objectCategory=user)(servicePrincipalName=*))",         # moi tai khoan co SPN
     "(&(objectCategory=user)(adminCount=1))",                   # tai khoan duoc AdminSDHolder bao ve
-    "(&(objectCategory=user)(description=*Pass*))",             # mat khau de lo trong description
+    "(&(objectCategory=user)(description=*Pass*))",             # mat khau de lo trong description   
+    # Lab khong plant password trong description (xem discard.md). Filter nay van sinh 1644 ghi lai chuoi filter 
+    #-> du cho V4 bat, du khong tra ve ket qua. Day la hanh vi recon thuc te cua attacker.
     "(&(objectCategory=computer)(operatingSystem=*Server*))"    # tim may chu
 )
 

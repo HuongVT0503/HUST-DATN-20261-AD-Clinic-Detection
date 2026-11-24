@@ -31,7 +31,7 @@ GO
 -- ===== P2 (persistence): tu nang SVC_HIS_Database len sysadmin ==============
 -- Sinh Event ID 33205 SERVER_ROLE_MEMBER_CHANGE (AUDIT_CHANGE da bat o audit spec).
 -- Day la moc V4 bat. Sau buoc nay tai khoan dich vu bypass duoc DENY DELETE.
-ALTER SERVER ROLE [sysadmin] ADD MEMBER [CLINIC\SVC_HIS_Database];
+ALTER SERVER ROLE [sysadmin] ADD MEMBER [CLINIC\SVC_HIS_Database]; //CHỈ chạy được sau khi đã qua single-user mode
 GO
 
 -- ===== P4a: doc hang loat du lieu nhay cam (vi pham quyen Read - Luat BVDLCN 2025) =====
