@@ -47,7 +47,7 @@ Luật V4 dùng phễu hai lớp:
 1. Whitelist theo ngữ cảnh chặt cho thao tác đọc (SELECT, 4769): chỉ loại trừ khi đồng thời đúng tài khoản `SVC_HIS_Sync`, đúng IP `SRV02`, và chỉ dừng ở truy vấn đọc theo mẫu kết xuất XML. Nếu `SVC_HIS_Sync` xin vé hoặc đăng nhập SQL từ máy trạm `WS01` thì bắn cảnh báo ngay.
 2. Chốt chặn cho thao tác phá hủy và vô hiệu hóa phòng thủ: nghiệp vụ XML theo 130 và 4750 là chỉ đọc và trích xuất, không bao giờ DELETE/DROP/TRUNCATE bệnh án, không bật `xp_cmdshell` (15457), không tắt Audit (33205 STATE OFF). Vì vậy nhánh giám sát toàn vẹn bệnh án không whitelist cho ai cả; kể cả kẻ tấn công dùng chính `SVC_HIS_Sync` để xóa bệnh án hay tắt Audit thì vẫn bị bắt.
 
-Lưu ý: các con số tỷ lệ giảm cảnh báo là minh họa dự kiến, điền số thật sau khi replay.
+Lưu ý: các con số tỷ lệ giảm cảnh báo sẽ điền sau khi replay.
 
 ## 5. Nguồn tra cứu
 

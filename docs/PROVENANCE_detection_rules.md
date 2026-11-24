@@ -51,9 +51,15 @@ Event 1644 tùy phiên bản Windows có thể chỉ có IP nguồn (trường C
 - Hoặc trên DC01, sau khi chạy evasion_adsi_low_and_slow_spn.ps1:
       Get-WinEvent -LogName "Directory Service" -FilterXPath "*[System[(EventID=1644)]]" -MaxEvents 1 | Format-List *
   xem tên account là field riêng hay chỉ nằm rong Message.
-
 Nếu có danh tính dạng field: SC1-V4 neo theo danh tính + IP.
 Nếu chỉ có IP đáng tin cậy: SC1-V4 neo theo IP nguồn (SRV02). Neo IP vẫn thỏa mãn Kerckhoffs vì attacker từ WS01 không giả mạo được IP SRV02 khi chưa chiếm SRV02 (lúc đó SC3 bắt).
+
+### Vì sao whitelist V4 không vi phạm Kerckhoffs (neo vào trường KDC xác thực, không vào bí mật)
+Nguyên tắc Kerckhoffs: an toàn không được dựa vào việc kẻ tấn công KHÔNG BIẾT cơ chế. Áp vào whitelist:
+- SC2-V4 (Kerberoast) dùng Event 4769 (Security log trên DC). 4769 do KDC sinh, LUÔN có cả danh tính người xin vé (TargetUserName) lẫn IP nguồn (IpAddress). Kẻ tấn công trên WS01 KHÔNG giả mạo được 2 trường này (KDC tự điền sau khi xác thực). Nên whitelist "bỏ qua khi người xin vé là SVC_HIS_Sync" dù kẻ tấn công biết tỏng vẫn không lách được, trừ khi nó chiếm được chính SVC_HIS_Sync (bài toán khác).
+  => SC2-V4 KHÔNG dựa vào bí mật, KHÔNG phải sửa gì cho Kerckhoffs. Có thể thêm `and source.ip: SRV02` để phòng thủ chiều sâu, nhưng không bắt buộc.
+- SC1-V4 (ADSI recon) dùng Event 1644 (Directory Service log), tùy phiên bản có thể KHÔNG có danh tính  dạng field sạch, chỉ có IP nguồn. Khi đó neo whitelist theo IP (SRV02). Neo IP vẫn thỏa Kerckhoffs vì IP nguồn của LDAP/Kerberos (TCP, có xác thực) không giả mạo được từ WS01 khi chưa chiếm SRV02, mà chiếm được SRV02 thì SC3 bắt.
+Điểm KHÁC với "security by obscurity": nếu neo whitelist vào NỘI DUNG filter LDAP (ví dụ bỏ qua query không chứa 'servicePrincipalName') thì MỚI là obscurity, vì chuỗi filter do kẻ tấn công tự đặt. Vì vậy cả SC1-V4 và SC2-V4 đều neo vào danh tính/IP (thứ attacker không điều khiển), không neo vào nội dung filter.
 
 ## 3. Dependency ngoài (tool KHÔNG nằm trong repo, người dựng lab phải tự tải)
 

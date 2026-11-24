@@ -42,25 +42,23 @@ Theo Bayes, độ chính xác của cảnh báo đẩy lên màn hình SOC chín
 
 Điểm mấu chốt: vì P(khong I) rất lớn, chỉ cần FPR nhỉnh lên một chút là FP sẽ nhiều hơn TP vô cùng nhiều, khiến Precision rất thấp. Đó là lý do nới luật để tăng Recall gần như luôn phải trả giá bằng Precision.
 
-## 4. Minh họa dự kiến cho luật V2 (CHƯA PHẢI SỐ ĐO THẬT, nguồn số dùng chung cho cả repo)
+## 4. Khung bảng kết quả (CHƯA CÓ SỐ, điền sau khi replay)
+Số thật sẽ đếm từ `04_evaluation_and_datasets/alerts_exported_csv/` sau khi replay .evtx qua từng phiên bản luật. Ở đây chỉ dựng sẵn khung và công thức.
 
-Ví dụ giả định, trên tập 100.000 sự kiện, nếu V2 bắt trúng cả 3 kịch bản (TP=3, FN=0) nhưng báo nhầm FP=5.420 do bắt luôn hoạt động giao ca và đồng bộ XML BHYT:
+Ký hiệu dùng chung cho cả repo (chỗ nào cần nhắc thì trỏ về đây, không tự chế số):
+- N: tổng số sự kiện trong tập replay (đếm sau khi có .evtx).
+- TP_Vi, FN_Vi, FP_Vi: số cảnh báo đúng / bỏ lọt / nhầm của phiên bản luật Vi, đếm ở mức alert-level.
+- P_Vi = TP_Vi / (TP_Vi + FP_Vi) : Precision.
+- R_Vi = TP_Vi / (TP_Vi + FN_Vi) : Recall.
+- GiamFP_Vi = (FP_V2 - FP_Vi) / FP_V2 * 100% : phần trăm FP giảm so với V2.
 
-- FPR xấp xỉ 5.420 / 99.997 = khoảng 5,42%
-- Precision = 3 / (3 + 5.420) = khoảng 0,055% (làm tròn 0,06%)
+| Phiên bản | TP | FN | FP (trên N log) | Precision | Recall | Kỳ vọng định tính |
+| --- | --- | --- | --- | --- | --- | --- |
+| V2 nới lỏng | TP_V2 | FN_V2 | FP_V2 | P_V2 | R_V2 | Recall cao, FP cao nhất (bùng nổ cảnh báo) |
+| V3 ngưỡng   | TP_V3 | FN_V3 | FP_V3 | P_V3 | R_V3 | FP giảm nhờ ngưỡng / cửa sổ trượt |
+| V4 ngữ cảnh | TP_V4 | FN_V4 | FP_V4 | P_V4 | R_V4 | FP thấp nhất nhờ whitelist, Recall tụt không đáng kể |
 
-Recall 100% nhưng Precision dưới 0,1%: là Alert Fatigue.
-Mục tiêu của V3 (ngưỡng, cửa sổ trượt) và V4 (whitelist ngữ cảnh) là kéo mẫu số FP xuống để Precision tăng mà Recall tụt không đáng kể. Số thật sẽ điền sau khi replay.
-
-Bảng minh họa (illustrative, chưa phải số đo thật) dùng xuyên suốt repo:
-
-| Phiên bản | TP | FN | FP (trên 100.000 log) | Precision | Ghi chú |
-| --- | --- | --- | --- | --- | --- |
-| V2 nới lỏng | 3 | 0 | 5.420 | ~0,06% | bùng nổ FP |
-| V3 ngưỡng | 3 | 0 | 185 | ~1,60% | giảm mạnh |
-| V4 ngữ cảnh | 3 | 0 | 8 | ~27,27% | giảm ~99,85% FP so với V2 |
-
-Các file khác (Precision_Recall..., Clinic_IT_Morning_Review_Playbook, legal docs) khi nhắc con số này thì ghi "xem bảng minh họa ở Base_Rate_Fallacy_Axelsson1999.md", không chép lại số.
+Giả thuyết cần kiểm chứng bằng số thật: nới luật để tăng Recall (V2) thì Precision tụt mạnh do FP tăng (base-rate); V3, V4 kéo FP xuống để Precision tăng mà Recall giữ gần nguyên.
 
 ## 5. Đọc thêm
 

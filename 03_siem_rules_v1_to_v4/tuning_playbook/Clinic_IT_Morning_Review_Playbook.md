@@ -12,7 +12,7 @@ Tại các phòng khám tuyến quận/huyện hoặc phòng khám đa khoa tư 
 | Phân nhóm Cảnh báo | Các Luật Kích hoạt (Bộ luật V4) | Cơ chế Phản ứng Tự động & Quy trình Xử lý |
 | :--- | :--- | :--- |
 | **Nhóm 1: Tối khẩn cấp (`CRITICAL` - Xâm phạm Bệnh án & Tắt Giám sát)** | - Tắt SQL Server Audit (`Event ID 33205: STATE = OFF`)<br>- Bật `xp_cmdshell` (`Event ID 15457`)<br>- Lệnh `DELETE` / `DROP` hoặc gỡ chữ ký số (`DaKySoTT13 = 0`) trên bảng `HoSoBenhAn`<br>- Hạ cấp mã hóa Kerberoasting `0x17` nhắm vào `SVC_HIS_Database` | **Kích hoạt ngay trong đêm:**<br>1. Gửi cảnh báo qua Telegram/SMS/Email cho IT trực.<br>2. Nếu phát hiện xâm phạm CSDL bệnh án, lập tức thu hồi phiên kết nối của tài khoản dịch vụ bị chiếm quyền.<br>3. Ghi nhận mốc thời gian để lập hồ sơ báo cáo Cục A05 (Bộ Công an) trong vòng **72 giờ** theo Luật BVDLCN 91/2025/QH15 nếu có rò rỉ dữ liệu nhạy cảm. |
-| **Nhóm 2: Rà soát Đầu giờ Sáng (`HIGH/MEDIUM` - Morning Review 08:00 – 08:30)** | - Truy vấn LDAP nhạy cảm (`Event ID 1644` chứa `adminCount=1`, `servicePrincipalName=*`)<br>- Yêu cầu vé TGS `AES256 (0x12)` bất thường từ máy trạm lễ tân (`WS01`)<br>- Truy vấn `SELECT` vượt ngưỡng cửa sổ trượt trên `HoSoBenhAn` | **Rà soát trong 30 phút đầu giờ sáng:**<br>Nhờ bộ lọc ngữ cảnh V4 đã giảm phần lớn cảnh báo giả (số minh họa dự kiến, xem bảng ở docs/academic_references/Base_Rate_Fallacy_Axelsson1999.md; số thật điền sau replay), nhân viên IT chỉ mất 15–30 phút mỗi sáng để kiểm tra bảng tổng hợp Kibana. |
+| **Nhóm 2: Rà soát Đầu giờ Sáng (`HIGH/MEDIUM` - Morning Review 08:00 – 08:30)** | - Truy vấn LDAP nhạy cảm (`Event ID 1644` chứa `adminCount=1`, `servicePrincipalName=*`)<br>- Yêu cầu vé TGS `AES256 (0x12)` bất thường từ máy trạm lễ tân (`WS01`)<br>- Truy vấn `SELECT` vượt ngưỡng cửa sổ trượt trên `HoSoBenhAn` | **Rà soát trong 30 phút đầu giờ sáng:**<br>Nhờ bộ lọc ngữ cảnh V4 đã giảm phần lớn cảnh báo giả (mức giảm FP điền số thật sau khi replay, xem khung bảng ở Base_Rate_Fallacy_Axelsson1999.md), nhân viên IT chỉ mất 15–30 phút mỗi sáng để kiểm tra bảng tổng hợp Kibana. |
 
 ---
 
@@ -37,6 +37,13 @@ Tại các phòng khám tuyến quận/huyện hoặc phòng khám đa khoa tư 
 ## 3. Hướng dẫn Áp dụng (Tuning Baseline 7 Ngày) cho Phòng khám Khác
 
 Khi triển khai bộ luật V4 này cho một phòng khám sử dụng phần mềm HIS thương mại khác (ví dụ: Viettel HIS, VNPT-HIS, Medisoft):
+### Bước 0 (làm 1 lần, khi vừa có Event 1644 thật): xác định nên whitelist theo danh tính hay theo IP
+Event 1644 tùy phiên bản Windows có thể chỉ có IP nguồn mà không có tên tài khoản dạng field riêng. Trước khi tin vào whitelist SC1-V4, kiểm tra 1 lần:
+1. Trên Kibana: Discover -> lọc `event.code: "1644"` -> mở 1 document -> tab JSON -> đọc hết `winlog.event_data.*`, xem có trường nào (SubjectUserName / User) chứa tên tài khoản và khác rỗng không.
+2. Hoặc trên DC chạy: `Get-WinEvent -LogName "Directory Service" -FilterXPath "*[System[(EventID=1644)]]" -MaxEvents 1 | Format-List *`
+- Nếu CÓ danh tính dạng field: whitelist SC1-V4 neo theo danh tính (tài khoản dịch vụ HIS) + IP máy chủ HIS.
+- Nếu CHỈ có IP: whitelist neo theo IP máy chủ HIS. An toàn như nhau (kẻ tấn công từ máy trạm không giả được IP máy chủ HIS khi chưa chiếm được nó).
+Ghi lại kết quả vào hồ sơ vận hành để lựa chọn whitelist là có căn cứ, không tùy tiện.
 1. **Ngày 1 – Ngày 7 (Thu thập Baseline):** Bật cấu hình Registry `1644` trên DC và `SQL Server Audit 33205` trên máy chủ DB.
 2. **Xác định Định danh Dịch vụ:** Ghi nhận chính xác tên tài khoản chạy dịch vụ đồng bộ BHYT (tương ứng với `SVC_HIS_Sync`) và địa chỉ IP tĩnh của máy chủ ứng dụng HIS (tương ứng với `SRV02`).
 3. **Cập nhật Khối `filter_clinic_whitelist`:** Điền tên tài khoản dịch vụ và IP máy chủ HIS vào mục `filter_` trong 3 tệp luật Sigma ở thư mục `v4_contextual_clinic_tuned/` để đạt hiệu quả giảm thiểu cảnh báo giả tương đương.

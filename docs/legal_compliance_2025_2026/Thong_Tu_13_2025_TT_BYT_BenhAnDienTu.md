@@ -64,7 +64,7 @@ Thông tư 13/2025 thể hiện trong Detection Engineering, thể hiện trong 
 | DELETE, DROP, TRUNCATE hoặc UPDATE trái phép bệnh án đã ký số | Cấm tuyệt đối (bệnh án phải lưu trữ nhiều năm) | 33205 action DELETE, hoặc statement chứa DELETE FROM HoSoBenhAn, DROP TABLE | Chốt chặn, không whitelist cho bất kỳ ai kể cả `SVC_HIS_Sync` hay `sa`, bắn CRITICAL |
 | Tắt Audit (ALTER SERVER AUDIT STATE OFF) hoặc bật `xp_cmdshell` | Cấm tuyệt đối (phá hủy lưu vết) | 33205 action đổi trạng thái Audit, và 15457 (xp_cmdshell 0 sang 1) | Chốt chặn, bắn CRITICAL tức thì |
 
-Lưu ý: tỷ lệ giảm cảnh báo giả ở hàng whitelist là số minh họa dự kiến, điền số thật sau replay.
+Lưu ý: tỷ lệ giảm cảnh báo giả ở hàng whitelist sẽ điền sau replay.
 
 ## 5. Nguồn tra cứu
 
