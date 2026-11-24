@@ -19,7 +19,7 @@
 
 ## 0c. Bắt buộc trước khi dựng
 1. **SQL phải Mixed Mode** (`/SECURITYMODE=SQL`): script 04 đã đặt sẵn. Thiếu thì không tạo được SQL Login `SVC_HIS_Sync`.
-2. **Thứ tự cố định:** DC01 lên trước (01→02), rồi SRV02/WS01 mới join được (03/04, 05/06).
+2. **Thứ tự cố định:** DC01 lên trước (01->02), rồi SRV02/WS01 mới join được (03/04, 05/06).
 3. **`sysmon_clinic_config.xml` và `Enable-LDAP-1644-Diagnostics.reg` không rỗng.
 4. Chạy 6 script đúng máy đúng thứ tự (các mục 3–5).
 
@@ -35,7 +35,7 @@
 
 Bộ luật V4 và KQL **hardcode SRV02 = `172.31.10.22`** để whitelist. Nếu để AWS cấp IP ngẫu nhiên, whitelist sẽ sai và số FP của V4 vô nghĩa. Chọn một trong hai:
 
-**Cách A (khuyên dùng): ghim Primary IP lúc launch.** Launch từng máy một, ở *Network settings → Advanced network configuration* điền **Primary IP** trong dải subnet (vd subnet `172.31.0.0/20`):
+**Cách A (khuyên dùng): ghim Primary IP lúc launch.** Launch từng máy một, ở *Network settings -> Advanced network configuration* điền **Primary IP** trong dải subnet (vd subnet `172.31.0.0/20`):
 
 | Máy | Primary private IP |
 |---|---|
@@ -54,7 +54,7 @@ Whitelist V4 neo theo **IP tĩnh máy chủ HIS** + **tài khoản dịch vụ �
 ### 1.4. Launch 3 máy
 - AMI **Windows Server 2022 Base** (64-bit); `t3.medium` (2vCPU/4GB); `35 GiB gp3`; cùng 1 subnet/AZ.
 - Key pair `clinic-lab-key.pem`. Auto-assign public IP = Enable.
-- Name tag: `DC01`, `SRV02`, `WS01`. Sau `Running` ~4 phút: Connect → Get password (nạp `.pem`).
+- Name tag: `DC01`, `SRV02`, `WS01`. Sau `Running` ~4 phút: Connect -> Get password (nạp `.pem`).
 
 ---
 
@@ -118,7 +118,7 @@ sqlcmd -S localhost -E -d HIS_ClinicDB -Q "SELECT name,is_state_enabled FROM sys
 sqlcmd -S localhost -E -d HIS_ClinicDB -Q "SELECT COUNT(*) FROM dbo.HoSoBenhAn;"
 Get-NetFirewallRule -DisplayName "Allow_MSSQL_1433"; Get-SmbShare -Name "BenhAn$"
 ```
-> Nếu (c) rỗng/0 → **dừng và sửa**: toàn bộ telemetry 33205 của Kịch bản 3 phụ thuộc vào đây
+> Nếu (c) rỗng/0 -> **dừng và sửa**: toàn bộ telemetry 33205 của Kịch bản 3 phụ thuộc vào đây
 
 ---
 
@@ -133,15 +133,15 @@ cd C:\HUST-DATN-20261-AD-Clinic-Detection\01_clinic_lab_and_noise\iac_goad_light
 
 ## 6. Sinh nhiễu (chạy TRƯỚC khi tấn công; để song song ~30–60 phút)
 Quy tắc đặt máy (whitelist V4 dựa vào IP nguồn):
-- Nhiễu **giao ca** (4624/4625) → **WS01**.
-- Nhiễu **đồng bộ HIS** (1644/33205/5140) → **SRV02**, dưới `SVC_HIS_Sync` (để 1644 mang IP SRV02).
+- Nhiễu **giao ca** (4624/4625) -> **WS01**.
+- Nhiễu **đồng bộ HIS** (1644/33205/5140) -> **SRV02**, dưới `SVC_HIS_Sync` (để 1644 mang IP SRV02).
 ```powershell
 # WS01:
 cd ...\business_noise_generators ; .\Register-ClinicNoiseScheduledTasks.ps1
 # SRV02:
 cd ...\business_noise_generators ; .\Register-ClinicNoiseScheduledTasks.ps1   # tự nhận SRV02 -> task sync dưới SVC_HIS_Sync
 ```
-> Task sync lỗi khởi động → cấp *Log on as a batch job* cho `SVC_HIS_Sync` (`secpol.msc`).
+> Task sync lỗi khởi động -> cấp *Log on as a batch job* cho `SVC_HIS_Sync` (`secpol.msc`).
 
 ---
 
@@ -158,8 +158,8 @@ cd ...\scenario_02_kerberoast_opsec
 .\attack_rc4_downgrade_0x17.ps1      # 2A - cần Rubeus.exe trong C:\Tools
 .\evasion_aes256_opsec_0x12.ps1      # 2B - .NET native
 ```
-### 7.3 Kịch bản 3 (leo quyền P2 trên SRV02, rồi P3→P4→P5)
-`SVC_HIS_Database` là Windows login → dùng `runas /netonly`, không `-U/-P`.
+### 7.3 Kịch bản 3 (leo quyền P2 trên SRV02, rồi P3->P4->P5)
+`SVC_HIS_Database` là Windows login -> dùng `runas /netonly`, không `-U/-P`.
 ```powershell
 # P2 trên SRV02 (quyền local-admin của SVC_HIS_Database):
 net stop MSSQLSERVER ; net start MSSQLSERVER /m
@@ -198,24 +198,24 @@ Copy tất cả `.evtx` + 2 file ground truth về `04_evaluation_and_datasets/e
 ```powershell
 Get-WinEvent -LogName "Directory Service" -FilterXPath "*[System[(EventID=1644)]]" -MaxEvents 1 | Format-List *
 ```
-Có `SubjectUserName`/`User` → whitelist SC1-V4 theo danh tính + IP. Chỉ có IP → whitelist theo IP SRV02.
+Có `SubjectUserName`/`User` -> whitelist SC1-V4 theo danh tính + IP. Chỉ có IP -> whitelist theo IP SRV02.
 
 ---
 
 ## 9. Hủy hạ tầng
-EC2 → chọn 3 máy → Instance state → **Terminate**.
+EC2 -> chọn 3 máy -> Instance state -> **Terminate**.
 
 ---
 
 ## 10. Phân tích offline
-Xem `04_evaluation_and_datasets/REPLAY_RUNBOOK.md` (bật ELK, nạp `.evtx`, chạy V1→V4, gán nhãn, tính số, vẽ).
+Xem `04_evaluation_and_datasets/REPLAY_RUNBOOK.md` (bật ELK, nạp `.evtx`, chạy V1->V4, gán nhãn, tính số, vẽ).
 
 ---
 
-## 11. Bảng Event ID → log nào → kịch bản nào (để không xuất thiếu)
+## 11. Bảng Event ID -> log nào -> kịch bản nào (để không xuất thiếu)
 | Event ID | Kênh log | Máy | Dùng cho |
 |---|---|---|---|
-| 1 (ProcessCreate) | Microsoft-Windows-Sysmon/Operational | WS01, SRV02 | SC1-1A (setspn), SC3-P3 (sqlservr→cmd) |
+| 1 (ProcessCreate) | Microsoft-Windows-Sysmon/Operational | WS01, SRV02 | SC1-1A (setspn), SC3-P3 (sqlservr->cmd) |
 | 1644 | Directory Service | DC01 | SC1-1B (ADSI low-and-slow) |
 | 4624/4625 | Security | DC01, WS01 | Nhiễu giao ca |
 | 4769 | Security | DC01 | SC2 (0x17 vs 0x12) |
@@ -223,4 +223,4 @@ Xem `04_evaluation_and_datasets/REPLAY_RUNBOOK.md` (bật ELK, nạp `.evtx`, ch
 | 15457 | Application | SRV02 | SC3-P3 (xp_cmdshell) |
 | 33205 | Application | SRV02 | SC3 (role-change, SELECT/DELETE, tắt audit) |
 
-Dòng nào không có `.evtx` tương ứng ở §8 → xuất thiếu
+Dòng nào không có `.evtx` tương ứng ở §8 -> xuất thiếu

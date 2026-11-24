@@ -1,4 +1,4 @@
-# Runbook: nạp `.evtx` vào ELK, chạy luật V1→V4, xuất số
+# Runbook: nạp `.evtx` vào ELK, chạy luật V1->V4, xuất số
 
 > Pha phân tích offline (sau khi đã có `.evtx` + ground truth từ AWS). Máy 8GB RAM, ELK trên WSL2 Docker.
 
@@ -44,13 +44,13 @@ curl "http://localhost:9200/winlogbeat-clinic-replay-*/_count?q=event.code:1644"
 curl "http://localhost:9200/winlogbeat-clinic-replay-*/_count?q=event.code:33205"
 curl "http://localhost:9200/winlogbeat-clinic-replay-*/_count?q=event.code:1"   # Sysmon - phai > 0
 ```
-Nếu một `event.code` kỳ vọng = 0 → đã xuất thiếu `.evtx` đó (quay lại mục 8 guide).
+Nếu một `event.code` kỳ vọng = 0 -> đã xuất thiếu `.evtx` đó (quay lại mục 8 guide).
 
-## 5. Import saved queries + chạy V1→V4
-1. Kibana → Stack Management → Saved Objects → Import `kql_queries/elastic_kibana_saved_queries.ndjson`.
-2. Discover → chọn index pattern `winlogbeat-clinic-replay-*` → mở từng saved query → đếm số hit.
+## 5. Import saved queries + chạy V1->V4
+1. Kibana -> Stack Management -> Saved Objects -> Import `kql_queries/elastic_kibana_saved_queries.ndjson`.
+2. Discover -> chọn index pattern `winlogbeat-clinic-replay-*` -> mở từng saved query -> đếm số hit.
 3. **V3 (ngưỡng):** tạo Elastic Threshold rule theo `README_sigma_kql_mapping.md`, HOẶC để script đánh giá áp ngưỡng khi gán nhãn.
-4. Xuất kết quả mỗi phiên bản ra CSV (Discover → Share → CSV, hoặc Reporting) vào `04_evaluation_and_datasets/alerts_exported_csv/alerts_iteration_v{1,2,3,4}.csv`. Mỗi CSV cần ít nhất 1 cột thời gian (`@timestamp`); thêm cột `scenario` để khớp đúng nhóm kịch bản.
+4. Xuất kết quả mỗi phiên bản ra CSV (Discover -> Share -> CSV, hoặc Reporting) vào `04_evaluation_and_datasets/alerts_exported_csv/alerts_iteration_v{1,2,3,4}.csv`. Mỗi CSV cần ít nhất 1 cột thời gian (`@timestamp`); thêm cột `scenario` để khớp đúng nhóm kịch bản.
 
 ## 6. Gán nhãn + tính số + vẽ
 ```bash

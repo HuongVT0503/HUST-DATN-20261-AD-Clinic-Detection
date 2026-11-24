@@ -56,7 +56,7 @@ Sơ đồ minh họa luồng liên kết giữa **3 phần** của đồ án:
 |      PHẦN 2: KỊCH BẢN TẤN CÔNG LẨN TRÁNH & THU THẬP LOG (02_telemetry_and_scenarios) |
 +======================================================================================+
 |                                                                                      |
-|  [ 3 kịch bản tấn công lẩn tránh (WSL2) ]       [ Thu thập & ẩn danh hóa nhật ký /log ]   |
+|  [ 3 kịch bản tấn công (chạy trên WS01/SRV02) ] [ Thu thập & ẩn danh hóa nhật ký /log ]   |
 |  1. Dò quét AD & SPN chậm qua ADSI       ====>  + Windows Security (4624, 4625, 4769)|
 |  2. Kerberoasting: RC4 0x17 vs AES 0x12         + Directory Service (1644) & Sysmon  |
 |  3. Chiếm SVC đọc/xóa DB, tắt SQL Audit         + SQL Server Audit (33205, 15457)    |
@@ -78,6 +78,8 @@ Sơ đồ minh họa luồng liên kết giữa **3 phần** của đồ án:
 |                                                                                      |
 +======================================================================================+
 ```
+WSL2 chỉ dùng cho Phần 3 (ELK offline). Tấn công chạy native trên WS01/SRV02.
+Atomic Red Team chỉ là mẫu lệnh tham chiếu để ánh xạ T-code, không phải công cụ chạy tấn công.
 
 > **Lưu ý triển khai hạ tầng (quan trọng):** Luồng chính của đồ án là dựng **3 máy EC2 Windows
 > riêng biệt trên AWS** (DC01, SRV02, WS01) rồi dựng miền `clinic.local` từ đầu bằng các script trong

@@ -14,7 +14,7 @@ thành phần, nguồn gốc, và license của chúng.
 | --- | --- | --- | --- |
 | SC1-V1 (SharpHound/BloodHound) | SigmaHQ `proc_creation_win_hktl_bloodhound_sharphound.yml`, Florian Roth | `f376c8a7-a2d0-4ddc-aa0c-16c17236d962` | DRL-1.1 |
 | SC2-V1 (Kerberoast RC4 0x17) | SigmaHQ `win_security_susp_rc4_kerberos.yml`, Florian Roth | `496a0e47-0a33-4dca-b009-9e6ca3591f39` | DRL-1.1 |
-| SC3-V1 (sqlservr→shell / xp_cmdshell) | Splunk `Windows Sqlservr Spawning Shell` (`d33aac9f-030c-4830-8701-0c2dd75bb6cb`) | — | Apache-2.0 (splunk/security_content) |
+| SC3-V1 (sqlservr->shell / xp_cmdshell) | Splunk `Windows Sqlservr Spawning Shell` (`d33aac9f-030c-4830-8701-0c2dd75bb6cb`) | — | Apache-2.0 (splunk/security_content) |
 | SC3-V1 (tham chiếu) | Elastic `Execution via MSSQL xp_cmdshell Stored Procedure` | — | Elastic License v2 (chỉ tham chiếu) |
 | V2/V3/V4 | Tự viết (widen/threshold/context) dựa trên các nguồn trên + Sigma Correlation spec | — | MIT (phần tự viết) / DRL-1.1 (phần kế thừa) |
 

@@ -1,7 +1,7 @@
 # Ánh xạ Sigma (`.yml`) ↔ KQL (`elastic_kibana_saved_queries.ndjson`)
 
 File `.ndjson` này chứa 12 saved query (3 kịch bản × 4 phiên bản). Mỗi query là bản dịch
-trực tiếp từ file Sigma tương ứng. Import vao Kibana: **Stack Management → Saved Objects → Import**.
+trực tiếp từ file Sigma tương ứng. Import vao Kibana: **Stack Management -> Saved Objects -> Import**.
 
 | Saved query (title) | Dịch từ file Sigma | Ghi chú |
 | --- | --- | --- |
@@ -22,11 +22,11 @@ trực tiếp từ file Sigma tương ứng. Import vao Kibana: **Stack Manageme
 
 1 **saved query** của Kibana (bộ lọc Discover) **không tự đếm theo cửa sổ thời gian** được. Với V3, query trong `.ndjson` chỉ **lọc nền** (ví dụ mọi 1644, mọi 4769 0x17/0x12). Ngưỡng thật ra được áp theo 1 trong 2 cách:
 
-1. **Elastic Threshold rule** (Security → Rules → Create → Threshold): dùng chính KQL base làm query, đặt `Group by = source.ip` (hoặc `TargetUserName`), `Threshold = N`, `Window = T`.-> cách "chạy thật" tương đương Sigma Correlation.
+1. **Elastic Threshold rule** (Security -> Rules -> Create -> Threshold): dùng chính KQL base làm query, đặt `Group by = source.ip` (hoặc `TargetUserName`), `Threshold = N`, `Window = T`.-> cách "chạy thật" tương đương Sigma Correlation.
 2. **Trong script đánh giá** (`04_evaluation_and_datasets/notebooks_and_scripts/`): đếm số sự kiện/cửa sổ khi gán nhãn.-> cho việc lập bảng TP/FP.
 
 Ngưỡng `N`, `T` trong file V3 là **placeholder** — phải tune từ baseline 7 ngày (xem `Clinic_IT_Morning_Review_Playbook.md`). //phải ghi rõ số được chọn + lý do
 
 ## Lưu ý trường (field) có thể lệch khi Winlogbeat phân tích
 - `winlog.event_data.SubjectUserName` / `TargetUserName` / `ServiceName` / `TicketEncryptionType`: kiểm tra Discover một document mẫu để chắc tên field đúng (một số sự kiện đẩy nội dung vào `message`).
-- `source.ip`: với 4769 Winlogbeat thường map từ `IpAddress`; với **1644** có thể KHÔNG có `source.ip` → khi đó whitelist SC1 neo theo trường thực sự có (xem `PROVENANCE`, mục kiểm tra 1644 1 lần).
+- `source.ip`: với 4769 Winlogbeat thường map từ `IpAddress`; với **1644** có thể KHÔNG có `source.ip` -> khi đó whitelist SC1 neo theo trường thực sự có (xem `PROVENANCE`, mục kiểm tra 1644 1 lần).
